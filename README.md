@@ -22,14 +22,16 @@ Desktopowa aplikacja giełdowa napisana w **JavaFX + JFreeChart**.
 | Feature | Status |
 |---|---|
 | Lista instrumentów (indeksy, akcje, krypto) | ✅ |
-| Wykres liniowy | ✅ |
-| Wykres świecowy (OHLC Candlestick) | ✅ |
-| Zakresy czasowe: 1D / 1T / 1M / 3M / 6M / YTD / 1R / 5R | ✅ |
-| Konto demo ($100,000 startowy balans) | ✅ |
-| Zlecenia KUP / SPRZEDAJ | ✅ |
-| Stop Loss / Take Profit (auto-trigger) | ✅ |
-| Zamykanie pozycji | ✅ |
-| Auto-refresh co 30s | ✅ |
+| Wykres liniowy |  |
+| Wykres świecowy (OHLC Candlestick) |  |
+| Zakresy czasowe: 1D / 1T / 1M / 3M / 6M / YTD / 1R / 5R | |
+| Konto demo ($100,000 startowy balans) |  |
+| Zlecenia KUP / SPRZEDAJ |  |
+| Stop Loss / Take Profit (auto-trigger) | |
+| Zamykanie pozycji |  |
+| Auto-refresh co 30s | |
+| AI analyzer bot to nalizy formacji swiecowch i przewidywanie ruchu rynk | |
+
 
 ---
 
@@ -53,7 +55,6 @@ Desktopowa aplikacja giełdowa napisana w **JavaFX + JFreeChart**.
 ## Road Mapa (kolejne kroki)
 
 - [ ] Historia transakcji (tabela closed orders)
-- [ ] Eksport historii do CSV
 - [ ] Powiadomienia dźwiękowe (SL/TP triggered)
 - [ ] Wskaźniki techniczne (RSI, MACD, MA)
 - [ ] Tryb live (WebSocket / krótki polling)
