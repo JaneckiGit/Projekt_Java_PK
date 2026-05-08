@@ -1,4 +1,4 @@
-# 📈 Stock Market Demo — Java Desktop App
+# 📈 Stock Market Demo + AI Analyzer — Java Desktop App
 
 Desktopowa aplikacja giełdowa napisana w **JavaFX + JFreeChart**.
 
@@ -8,42 +8,12 @@ Desktopowa aplikacja giełdowa napisana w **JavaFX + JFreeChart**.
 
 ---
 
-## Struktura projektu
-
-```
-src/main/java/com/stockdemo/
-├── MainApp.java              
-├── api/
-│   └── 
-├── model/
-│   ├── 
-│   ├── 
-│   └── 
-├── service/
-│   └── 
-└── ui/
-    ├── 
-    ├── 
-    └── 
-```
-
----
 
 ## Wymagania
 
 - **Java 17+**
 - **Maven 3.8+**
 - Połączenie z internetem
-
----
-
-## Uruchomienie
-
-
-Lub w IntelliJ:
-1. File → Open → wybierz `pom.xml` → Open as Project
-2. Poczekaj aż Maven pobierze zależności
-3. Uruchom klasę `MainApp`
 
 ---
 
