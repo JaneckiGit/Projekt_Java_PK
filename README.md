@@ -4,7 +4,7 @@ Desktopowa aplikacja giełdowa napisana w **JavaFX + JFreeChart**.
 
 # Autorzy
 - [Mateusz Janecki](https://github.com/JaneckiGit)
-- [Paweł Drabik](https://github.com/)
+- [Paweł Drabik](https://github.com/LiIWind)
 
 ---
 
