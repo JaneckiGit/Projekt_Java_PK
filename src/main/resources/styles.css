@@ -1,0 +1,347 @@
+/* =========================================================
+   Stock Demo — Dark Theme
+   ========================================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+.root {
+    -fx-background-color: #0d1117;
+    -fx-font-family: 'Inter', 'Segoe UI', sans-serif;
+    -fx-font-size: 13px;
+}
+
+/* ── Scrollbar ─────────────────────────────────────────── */
+.scroll-bar:vertical .track,
+.scroll-bar:horizontal .track {
+    -fx-background-color: #161b22;
+}
+.scroll-bar:vertical .thumb,
+.scroll-bar:horizontal .thumb {
+    -fx-background-color: #30363d;
+    -fx-background-radius: 4;
+}
+.scroll-bar .increment-button,
+.scroll-bar .decrement-button {
+    -fx-background-color: transparent;
+}
+
+/* ── Watchlist Panel ───────────────────────────────────── */
+#watchlistPanel {
+    -fx-background-color: #161b22;
+    -fx-border-color: #21262d;
+    -fx-border-width: 0 1 0 0;
+    -fx-min-width: 240px;
+    -fx-max-width: 240px;
+}
+
+#watchlistTitle {
+    -fx-text-fill: #e6edf3;
+    -fx-font-size: 14px;
+    -fx-font-weight: 700;
+    -fx-padding: 16 16 8 16;
+}
+
+.filter-btn {
+    -fx-background-color: #21262d;
+    -fx-text-fill: #8b949e;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-padding: 4 12;
+    -fx-font-size: 11px;
+    -fx-font-weight: 600;
+    -fx-cursor: hand;
+}
+.filter-btn:hover {
+    -fx-background-color: #30363d;
+    -fx-text-fill: #e6edf3;
+}
+.filter-btn-active {
+    -fx-background-color: #1f6feb;
+    -fx-text-fill: #ffffff;
+}
+
+.instrument-list {
+    -fx-background-color: transparent;
+    -fx-border-width: 0;
+}
+.instrument-list .list-cell {
+    -fx-background-color: transparent;
+    -fx-padding: 10 16;
+    -fx-border-color: transparent transparent #21262d transparent;
+    -fx-border-width: 0 0 1 0;
+    -fx-cursor: hand;
+}
+.instrument-list .list-cell:hover {
+    -fx-background-color: #1c2128;
+}
+.instrument-list .list-cell:selected {
+    -fx-background-color: #1f3a5f;
+}
+
+.inst-symbol {
+    -fx-text-fill: #e6edf3;
+    -fx-font-weight: 700;
+    -fx-font-size: 13px;
+}
+.inst-name {
+    -fx-text-fill: #8b949e;
+    -fx-font-size: 11px;
+}
+.inst-price {
+    -fx-text-fill: #e6edf3;
+    -fx-font-weight: 600;
+    -fx-font-size: 13px;
+}
+.change-positive {
+    -fx-text-fill: #3fb950;
+    -fx-font-size: 11px;
+    -fx-font-weight: 600;
+}
+.change-negative {
+    -fx-text-fill: #f85149;
+    -fx-font-size: 11px;
+    -fx-font-weight: 600;
+}
+
+.badge-stock  { -fx-background-color: #1f6feb44; -fx-text-fill: #58a6ff; }
+.badge-cfd    { -fx-background-color: #8957e544; -fx-text-fill: #bc8cff; }
+.badge-crypto { -fx-background-color: #3fb95044; -fx-text-fill: #3fb950; }
+.type-badge {
+    -fx-font-size: 9px;
+    -fx-font-weight: 700;
+    -fx-padding: 1 5;
+    -fx-background-radius: 3;
+}
+
+/* ── Chart Panel ───────────────────────────────────────── */
+#chartPanel {
+    -fx-background-color: #0d1117;
+}
+
+#chartToolbar {
+    -fx-background-color: #161b22;
+    -fx-border-color: #21262d;
+    -fx-border-width: 0 0 1 0;
+    -fx-padding: 8 16;
+    -fx-spacing: 8;
+}
+
+#chartSymbolLabel {
+    -fx-text-fill: #e6edf3;
+    -fx-font-size: 18px;
+    -fx-font-weight: 700;
+}
+#chartPriceLabel {
+    -fx-text-fill: #e6edf3;
+    -fx-font-size: 16px;
+    -fx-font-weight: 600;
+}
+
+.range-btn {
+    -fx-background-color: transparent;
+    -fx-text-fill: #8b949e;
+    -fx-border-radius: 5;
+    -fx-background-radius: 5;
+    -fx-padding: 3 10;
+    -fx-font-size: 12px;
+    -fx-font-weight: 600;
+    -fx-cursor: hand;
+}
+.range-btn:hover {
+    -fx-background-color: #21262d;
+    -fx-text-fill: #e6edf3;
+}
+.range-btn-active {
+    -fx-background-color: #1f6feb;
+    -fx-text-fill: #ffffff;
+}
+
+.chart-type-btn {
+    -fx-background-color: #21262d;
+    -fx-text-fill: #8b949e;
+    -fx-border-radius: 5;
+    -fx-background-radius: 5;
+    -fx-padding: 4 12;
+    -fx-font-size: 12px;
+    -fx-cursor: hand;
+}
+.chart-type-btn-active {
+    -fx-background-color: #30363d;
+    -fx-text-fill: #e6edf3;
+}
+
+/* ── Portfolio Panel (XTB Style) ───────────────────────── */
+#portfolioPanel {
+    -fx-background-color: #161b22;
+    -fx-border-color: #21262d;
+    -fx-border-width: 0 0 0 1;
+    -fx-min-width: 280px;
+    -fx-max-width: 280px;
+    -fx-padding: 0;
+}
+
+.portfolio-section {
+    -fx-padding: 14 16;
+    -fx-border-color: transparent transparent #21262d transparent;
+    -fx-border-width: 0 0 1 0;
+}
+.section-title {
+    -fx-text-fill: #8b949e;
+    -fx-font-size: 10px;
+    -fx-font-weight: 700;
+    -fx-letter-spacing: 1px;
+}
+.balance-value {
+    -fx-text-fill: #e6edf3;
+    -fx-font-size: 22px;
+    -fx-font-weight: 700;
+}
+.equity-value {
+    -fx-text-fill: #3fb950;
+    -fx-font-size: 13px;
+    -fx-font-weight: 600;
+}
+
+.trade-field {
+    -fx-background-color: #0d1117;
+    -fx-text-fill: #e6edf3;
+    -fx-border-color: #30363d;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-padding: 6 10;
+    -fx-font-size: 13px;
+    -fx-pref-width: 115;
+}
+.trade-field:focused {
+    -fx-border-color: #1f6feb;
+}
+
+.sl-field { -fx-border-color: #f85149; }
+.tp-field { -fx-border-color: #3fb950; }
+
+.positions-list {
+    -fx-background-color: transparent;
+    -fx-border-width: 0;
+}
+.position-cell {
+    -fx-background-color: #1c2128;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-padding: 8 10;
+    -fx-spacing: 4;
+}
+.pos-symbol {
+    -fx-text-fill: #e6edf3;
+    -fx-font-weight: 700;
+    -fx-font-size: 12px;
+}
+.pos-pnl-positive { -fx-text-fill: #3fb950; -fx-font-weight: 700; -fx-font-size: 12px; }
+.pos-pnl-negative { -fx-text-fill: #f85149; -fx-font-weight: 700; -fx-font-size: 12px; }
+
+.btn-close-pos {
+    -fx-background-color: #30363d;
+    -fx-text-fill: #8b949e;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+    -fx-padding: 2 8;
+    -fx-font-size: 11px;
+    -fx-cursor: hand;
+}
+.btn-close-pos:hover {
+    -fx-background-color: #f85149;
+    -fx-text-fill: white;
+}
+
+/* XTB Style UI Form Elements */
+.xtb-tabs {
+    -fx-background-color: #21262d;
+    -fx-background-radius: 20;
+    -fx-padding: 2;
+}
+.xtb-tab-btn {
+    -fx-background-color: transparent;
+    -fx-text-fill: #8b949e;
+    -fx-font-size: 13px;
+    -fx-font-weight: 600;
+    -fx-padding: 8 16 8 16;
+    -fx-background-radius: 18;
+    -fx-cursor: hand;
+}
+.xtb-tab-btn-active {
+    -fx-background-color: #30363d;
+    -fx-text-fill: #ffffff;
+}
+
+.xtb-volume-box {
+    -fx-border-color: #30363d;
+    -fx-border-width: 1;
+    -fx-border-radius: 8;
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+}
+.xtb-vol-left {
+    -fx-border-color: #30363d;
+    -fx-border-width: 0 1 0 0;
+    -fx-padding: 10 12 10 12;
+}
+.xtb-vol-btn {
+    -fx-background-color: transparent;
+    -fx-text-fill: #e6edf3;
+    -fx-font-size: 20px;
+    -fx-font-weight: 300;
+    -fx-cursor: hand;
+    -fx-padding: 0 15 0 15;
+}
+.xtb-vol-btn:hover {
+    -fx-background-color: #30363d;
+}
+.xtb-vol-field {
+    -fx-background-color: transparent;
+    -fx-text-fill: #ffffff;
+    -fx-font-size: 18px;
+    -fx-font-weight: 700;
+    -fx-alignment: center;
+    -fx-pref-width: 100px;
+}
+
+.xtb-funds {
+    -fx-text-fill: #8b949e;
+    -fx-font-size: 13px;
+}
+.xtb-funds-val {
+    -fx-text-fill: #ffffff;
+    -fx-font-size: 13px;
+}
+
+.xtb-btn-sell {
+    -fx-background-color: #e53935;
+    -fx-background-radius: 8;
+    -fx-cursor: hand;
+}
+.xtb-btn-sell:hover { -fx-background-color: #f44336; }
+.xtb-btn-buy {
+    -fx-background-color: #2e7d32;
+    -fx-background-radius: 8;
+    -fx-cursor: hand;
+}
+.xtb-btn-buy:hover { -fx-background-color: #388e3c; }
+
+.xtb-btn-title {
+    -fx-text-fill: white;
+    -fx-font-size: 16px;
+    -fx-font-weight: 700;
+}
+.xtb-btn-price {
+    -fx-text-fill: white;
+    -fx-font-size: 14px;
+}
+
+.xtb-row-lbl {
+    -fx-text-fill: #8b949e;
+    -fx-font-size: 12px;
+}
+.xtb-row-val {
+    -fx-text-fill: #e6edf3;
+    -fx-font-size: 13px;
+    -fx-font-weight: 600;
+}
