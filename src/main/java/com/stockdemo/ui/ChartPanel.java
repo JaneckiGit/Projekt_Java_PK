@@ -18,6 +18,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 public class ChartPanel extends BorderPane {
 
@@ -165,7 +166,7 @@ public class ChartPanel extends BorderPane {
         double ch = inst.getChangePercent();
         priceLabel.setText(formatPrice(p));
         String sign = ch >= 0 ? "+" : "";
-        changeLabel.setText(sign + String.format("%.2f%%", ch));
+        changeLabel.setText(sign + String.format(Locale.US, "%.2f%%", ch));
         changeLabel.getStyleClass().removeAll("change-positive", "change-negative");
         changeLabel.getStyleClass().add(ch >= 0 ? "change-positive" : "change-negative");
     }
@@ -358,9 +359,14 @@ public class ChartPanel extends BorderPane {
         double ratio = (y - PAD_TOP) / cH;
         return maxPrice - ratio * (maxPrice - minPrice);
     }
+
     private String formatPrice(double p) {
-        if (p < 1)   return String.format("%.5f", p);
-        if (p < 100) return String.format("%.4f", p);
-        return String.format("%.2f", p);
+        try {
+            if (p < 1)   return String.format(Locale.US, "%.5f", p);
+            if (p < 100) return String.format(Locale.US, "%.4f", p);
+            return String.format(Locale.US, "%.2f", p);
+        } catch (Exception e) {
+            return String.valueOf(p);
+        }
     }
 }
