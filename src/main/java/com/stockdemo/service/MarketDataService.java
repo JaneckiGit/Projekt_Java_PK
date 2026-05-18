@@ -16,65 +16,105 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 /**
- * Centralny serwis do pobierania i odświeżania danych rynkowych.
- * Wykonuje cykliczne zapytania do API na osobnym wątku (nie zacina interfejsu).
+ * Central service for fetching & refreshing market data.
+ * Polls prices every 30 seconds on a background thread.
  */
 public class MarketDataService {
 
     private final YahooFinanceApi yahoo = new YahooFinanceApi();
-    private final BinanceApi binance = new BinanceApi();
+    private final BinanceApi binance    = new BinanceApi();
+    private final ScheduledExecutorService scheduler =
+            Executors.newScheduledThreadPool(2, r -> {
+                Thread t = new Thread(r, "MarketData-Poller");
+                t.setDaemon(true);
+                return t;
+            });
 
-    // Pula wątków do zadań w tle
-    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(2, r -> {
-        Thread t = new Thread(r, "MarketData-Poller");
-        t.setDaemon(true);
-        return t;
-    });
-
-    // Główna lista wszystkich dostępnych w aplikacji instrumentów
+    // Master list of all instruments
     public final ObservableList<Instrument> instruments = FXCollections.observableArrayList(
-            new Instrument("AAPL",  "Apple Inc.",      AssetType.STOCK,  "AAPL"),
-            new Instrument("TSLA",  "Tesla",           AssetType.STOCK,  "TSLA"),
-            new Instrument("MSFT",  "Microsoft",       AssetType.STOCK,  "MSFT"),
-            new Instrument("BTC",   "Bitcoin",         AssetType.CRYPTO, "BTCUSDT"),
-            new Instrument("ETH",   "Ethereum",        AssetType.CRYPTO, "ETHUSDT"),
-            new Instrument("US100", "US 100 CFD",      AssetType.CFD,    "^NDX"),
-            new Instrument("GOLD",  "Gold CFD",        AssetType.CFD,    "GC=F")
+            // ── STOCKS (US) ─────────────────────────────────────────────
+            new Instrument("AAPL",  "Apple Inc.",          AssetType.STOCK,  "AAPL"),
+            new Instrument("MSFT",  "Microsoft",           AssetType.STOCK,  "MSFT"),
+            new Instrument("TSLA",  "Tesla",               AssetType.STOCK,  "TSLA"),
+            new Instrument("NVDA",  "NVIDIA",              AssetType.STOCK,  "NVDA"),
+            new Instrument("AMZN",  "Amazon",              AssetType.STOCK,  "AMZN"),
+            new Instrument("GOOGL", "Alphabet",            AssetType.STOCK,  "GOOGL"),
+            new Instrument("META",  "Meta Platforms",      AssetType.STOCK,  "META"),
+            new Instrument("AMD",   "Advanced Micro Dev.", AssetType.STOCK,  "AMD"),
+            new Instrument("INTC",  "Intel",               AssetType.STOCK,  "INTC"),
+            new Instrument("NFLX",  "Netflix",             AssetType.STOCK,  "NFLX"),
+            // ── STOCKS (WIG20 - Poland) ─────────────────────────────────
+            new Instrument("CDR",   "CD Projekt",          AssetType.STOCK,  "CDR.WA"),
+            new Instrument("PKN",   "Orlen",               AssetType.STOCK,  "PKN.WA"),
+            new Instrument("PKO",   "PKO BP",              AssetType.STOCK,  "PKO.WA"),
+            new Instrument("DNP",   "Dino Polska",         AssetType.STOCK,  "DNP.WA"),
+            new Instrument("KGH",   "KGHM",                AssetType.STOCK,  "KGH.WA"),
+            // ── INDICES ─────────────────────────────────────────────────
+            new Instrument("SPX",   "S&P 500",             AssetType.STOCK,  "^GSPC"),
+            new Instrument("NDX",   "NASDAQ 100",          AssetType.STOCK,  "^NDX"),
+            new Instrument("DJI",   "Dow Jones",           AssetType.STOCK,  "^DJI"),
+            // ── CFD (Commodities & Forex) ───────────────────────────────
+            new Instrument("GOLD",  "Gold CFD",            AssetType.CFD,    "GC=F"),
+            new Instrument("SILV",  "Silver CFD",          AssetType.CFD,    "SI=F"),
+            new Instrument("OIL",   "Crude Oil CFD",       AssetType.CFD,    "CL=F"),
+            new Instrument("NGAS",  "Natural Gas CFD",     AssetType.CFD,    "NG=F"),
+            new Instrument("COPP",  "Copper CFD",          AssetType.CFD,    "HG=F"),
+            new Instrument("EURUSD","EUR/USD CFD",         AssetType.CFD,    "EURUSD=X"),
+            new Instrument("GBPUSD","GBP/USD CFD",         AssetType.CFD,    "GBPUSD=X"),
+            new Instrument("USDJPY","USD/JPY CFD",         AssetType.CFD,    "USDJPY=X"),
+            new Instrument("EURPLN","EUR/PLN CFD",         AssetType.CFD,    "EURPLN=X"),
+            new Instrument("USDPLN","USD/PLN CFD",         AssetType.CFD,    "USDPLN=X"),
+            // ── CRYPTO (Binance) ────────────────────────────────────────
+            new Instrument("BTC",   "Bitcoin",             AssetType.CRYPTO, "BTCUSDT"),
+            new Instrument("ETH",   "Ethereum",            AssetType.CRYPTO, "ETHUSDT"),
+            new Instrument("BNB",   "BNB",                 AssetType.CRYPTO, "BNBUSDT"),
+            new Instrument("SOL",   "Solana",              AssetType.CRYPTO, "SOLUSDT"),
+            new Instrument("XRP",   "XRP",                 AssetType.CRYPTO, "XRPUSDT"),
+            new Instrument("ADA",   "Cardano",             AssetType.CRYPTO, "ADAUSDT"),
+            new Instrument("DOGE",  "Dogecoin",            AssetType.CRYPTO, "DOGEUSDT"),
+            new Instrument("DOT",   "Polkadot",            AssetType.CRYPTO, "DOTUSDT"),
+            new Instrument("LINK",  "Chainlink",           AssetType.CRYPTO, "LINKUSDT"),
+            new Instrument("MATIC", "Polygon",             AssetType.CRYPTO, "MATICUSDT")
     );
 
     /**
-     * Startuje pętlę odświeżania cen. Krypto odświeża się co 2 sekundy, Akcje co 5 sekund.
-     * @param onUpdate Funkcja wywoływana po każdym cyklu odświeżenia (do aktualizacji UI).
+     * Start polling:
+     *  - Crypto (Binance): every 5 seconds
+     *  - Stocks/CFD (Yahoo): every 15 seconds
+     * onUpdate is called on FX thread after EACH refresh cycle.
      */
     public void startPolling(Runnable onUpdate) {
-        // Fast crypto timer (co 2 sekundy)
+        // Fast crypto timer (every 2 seconds)
         List<Instrument> cryptoList = instruments.stream()
-                .filter(i -> i.getType() == AssetType.CRYPTO).toList();
-
+                .filter(i -> i.getType() == AssetType.CRYPTO)
+                .toList();
         scheduler.scheduleAtFixedRate(() -> {
-            for (Instrument inst : cryptoList) {
+            cryptoList.forEach(inst -> {
                 try { binance.updatePrice(inst); }
-                catch (Exception ignored) {} // ignorujemy błędy sieciowe, by nie przerywać pętli
-            }
+                catch (Exception e) {
+                    System.err.println("[Poll-Crypto] " + inst.getSymbol() + ": " + e.getMessage());
+                }
+            });
             if (onUpdate != null) Platform.runLater(onUpdate);
         }, 0, 2, TimeUnit.SECONDS);
 
-        // Stocks/CFD timer (co 5 sekund)
+        // Stocks/CFD timer (every 5 seconds)
         List<Instrument> stocksCfdList = instruments.stream()
-                .filter(i -> i.getType() != AssetType.CRYPTO).toList();
-
+                .filter(i -> i.getType() != AssetType.CRYPTO)
+                .toList();
         scheduler.scheduleAtFixedRate(() -> {
-            for (Instrument inst : stocksCfdList) {
+            stocksCfdList.forEach(inst -> {
                 try { yahoo.updatePrice(inst); }
-                catch (Exception ignored) {}
-            }
+                catch (Exception e) {
+                    System.err.println("[Poll-Stock] " + inst.getSymbol() + ": " + e.getMessage());
+                }
+            });
             if (onUpdate != null) Platform.runLater(onUpdate);
         }, 1, 5, TimeUnit.SECONDS);
     }
 
-    /**
-     * Pobiera historyczne świece dla podanego zakresu (np. "1D", "1M").
-     */
+
+    /** Fetch OHLCV candles for the selected instrument and time range. */
     public void loadCandles(Instrument instrument, String range, Consumer<List<Candle>> callback) {
         scheduler.submit(() -> {
             try {
@@ -86,10 +126,10 @@ public class MarketDataService {
                     String[] p = toYahooParams(range);
                     candles = yahoo.getCandles(instrument.getApiSymbol(), p[0], p[1]);
                 }
-                // Oddajemy dane do UI z powrotem na głównym wątku JavaFX
-                Platform.runLater(() -> callback.accept(candles));
+                List<Candle> finalCandles = candles;
+                Platform.runLater(() -> callback.accept(finalCandles));
             } catch (Exception e) {
-                System.err.println("Load candles error: " + e.getMessage());
+                System.err.println("[MarketDataService] loadCandles error: " + e.getMessage());
             }
         });
     }
@@ -98,20 +138,29 @@ public class MarketDataService {
         scheduler.shutdownNow();
     }
 
+
+    /** Yahoo Finance interval/range params based on time range label. */
     private String[] toYahooParams(String range) {
         return switch (range) {
             case "1D" -> new String[]{"5m",  "1d"};
             case "1T" -> new String[]{"30m", "5d"};
             case "1M" -> new String[]{"1d",  "1mo"};
+            case "3M" -> new String[]{"1d",  "3mo"};
+            case "1R" -> new String[]{"1wk", "1y"};
+            case "5R" -> new String[]{"1mo", "5y"};
             default   -> new String[]{"1d",  "1mo"};
         };
     }
 
+    /** Binance interval/limit params based on time range label. */
     private String[] toBinanceParams(String range) {
         return switch (range) {
             case "1D" -> new String[]{"5m",  "288"};
             case "1T" -> new String[]{"30m", "240"};
             case "1M" -> new String[]{"1d",  "30"};
+            case "3M" -> new String[]{"1d",  "90"};
+            case "1R" -> new String[]{"1w",  "52"};
+            case "5R" -> new String[]{"1M",  "60"};
             default   -> new String[]{"1d",  "30"};
         };
     }
