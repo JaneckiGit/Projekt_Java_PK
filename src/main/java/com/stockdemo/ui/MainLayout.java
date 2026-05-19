@@ -3,10 +3,7 @@ package com.stockdemo.ui;
 import com.stockdemo.model.Instrument;
 import com.stockdemo.service.MarketDataService;
 import com.stockdemo.service.PortfolioService;
-import javafx.application.Platform;
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.scene.control.Label;
 import javafx.scene.layout.*;
 
 /**
