@@ -9,6 +9,8 @@ import javafx.collections.ObservableList;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.time.LocalDateTime;
+import com.stockdemo.model.ClosedPosition;
 
 /**
  * Zarządza portfelem inwestycyjnym (balans, pozycje, margin).
@@ -21,6 +23,8 @@ public class PortfolioService {
 
     // Lista aktywnych pozycji
     public final ObservableList<Position> openPositions = FXCollections.observableArrayList();
+    // Lista zamkniętych pozycji (Historia)
+    public final ObservableList<ClosedPosition> closedPositions = FXCollections.observableArrayList();
 
     public double getBalance() { return balance.get(); }
     public DoubleProperty balanceProperty() { return balance; }
@@ -56,9 +60,24 @@ public class PortfolioService {
     public void closePosition(Position pos) {
         if (!openPositions.contains(pos)) return;
         
+        pos.updatePnl(); // Upewnij się, że PnL jest aktualny
+        double pnl = pos.getPnl();
+        double closePrice = pos.isLong() ? pos.getInstrument().getBid() : pos.getInstrument().getAsk();
+        
         // Add current value of holdings to cash balance
         double currentValue = pos.getQuantity() * pos.getInstrument().getBid();
         balance.set(balance.get() + currentValue);
+        
+        ClosedPosition closedPos = new ClosedPosition(
+                pos.getInstrument(),
+                pos.isLong(),
+                pos.getQuantity(),
+                pos.getEntryPrice(),
+                closePrice,
+                pnl,
+                LocalDateTime.now()
+        );
+        closedPositions.add(0, closedPos); // Add to beginning of history
         
         openPositions.remove(pos);
         refreshPortfolio();

@@ -2,20 +2,15 @@ package com.stockdemo.ui;
 
 import com.stockdemo.model.Instrument;
 import com.stockdemo.model.Position;
+import com.stockdemo.model.ClosedPosition;
 import com.stockdemo.service.PortfolioService;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
-import javafx.scene.shape.Circle;
+import java.time.format.DateTimeFormatter;
 
-import java.util.function.BiConsumer;
-
-/**
- * Prawy panel: Podsumowanie konta + formularz zleceń (XTB Style) + lista
- * pozycji.
- */
 public class PortfolioPanel extends VBox {
 
     private final PortfolioService portfolio;
@@ -33,8 +28,15 @@ public class PortfolioPanel extends VBox {
     private final TextField slField = new TextField();
     private final TextField tpField = new TextField();
 
-    // Lista otwartych pozycji
+    // Listy
     private final ListView<Position> positionsList = new ListView<>();
+    private final ListView<ClosedPosition> historyList = new ListView<>();
+
+    private final Label availableFundsLbl = new Label("$0.00");
+    private final Label marginValueLbl = new Label("≈ $0.00");
+    private final Label spreadLbl = new Label("$0.00 / 0 PIPS");
+    private final Label contractValueLbl = new Label("≈ $0.00");
+    private final Label buyPriceLbl = new Label("0.00");
 
     public PortfolioPanel(PortfolioService portfolio, ChartPanel chartPanel) {
         this.portfolio = portfolio;
@@ -43,25 +45,20 @@ public class PortfolioPanel extends VBox {
         this.setSpacing(0);
 
         buildAccountSection();
-        buildTradeForm();
-        buildPositionsList();
+        buildUnifiedTradeForm();
+        buildPositionsAndHistorySection();
+        
+        // Przekaż listę otwartych pozycji do ChartPanel
+        chartPanel.setOpenPositions(portfolio.openPositions);
 
-        chartPanel.setOnSlTpChanged(() -> {
-            slField.setText(formatPrice(chartPanel.getSlPrice()));
-            tpField.setText(formatPrice(chartPanel.getTpPrice()));
-            
-            // Aktualizuj SL/TP dla otwartej pozycji (jeśli istnieje) na wybranym instrumencie
-            for (Position p : portfolio.openPositions) {
-                if (p.getInstrument().equals(selectedInstrument)) {
-                    p.setStopLoss(chartPanel.getSlPrice());
-                    p.setTakeProfit(chartPanel.getTpPrice());
-                }
-            }
-            refresh();
+        chartPanel.setOnPendingSlTpChanged(() -> {
+            slField.setText(formatPrice(chartPanel.getPendingSlPrice()));
+            tpField.setText(formatPrice(chartPanel.getPendingTpPrice()));
         });
 
         // Odświeżaj listę pozycji automatycznie
         portfolio.openPositions.addListener((javafx.collections.ListChangeListener<Position>) c -> refresh());
+        portfolio.closedPositions.addListener((javafx.collections.ListChangeListener<ClosedPosition>) c -> refresh());
         refresh();
     }
 
@@ -70,10 +67,10 @@ public class PortfolioPanel extends VBox {
 
         slField.setText("0.00");
         tpField.setText("0.00");
-        chartPanel.setSlPrice(0.0);
-        chartPanel.setTpPrice(0.0);
+        chartPanel.setPendingSlPrice(0.0);
+        chartPanel.setPendingTpPrice(0.0);
 
-        // Resetuje wolumen do bezpiecznego "0.01" przy zmianie instrumentu
+        // Resetuje wolumen
         qtyField.setText("0.01");
         updateOrderValue();
     }
@@ -88,10 +85,12 @@ public class PortfolioPanel extends VBox {
         pnlLabel.setText("P&L: " + sign + "$" + String.format("%,.2f", pnl));
         pnlLabel.setStyle("-fx-text-fill: " + (pnl >= 0 ? "#3fb950" : "#f85149") + ";");
         availableFundsLbl.setText("$" + String.format("%,.2f", portfolio.getBalance()));
+        
         positionsList.refresh();
+        historyList.refresh();
+        
+        updateOrderValue(); // to refresh pending preview on chart
     }
-
-    // ── Budowanie UI ───────────────────────────────────────────────────────
 
     private void buildAccountSection() {
         Label sectionTitle = new Label("ACCOUNT");
@@ -106,29 +105,16 @@ public class PortfolioPanel extends VBox {
         this.getChildren().add(section);
     }
 
-    private final Label availableFundsLbl = new Label("$0.00");
-    private final Label marginValueLbl = new Label("≈ $0.00");
-    private final Label spreadLbl = new Label("$0.00 / 0 PIPS");
-    private final Label contractValueLbl = new Label("≈ $0.00");
-    private final Label buyPriceLbl = new Label("0.00");
+    private void buildUnifiedTradeForm() {
+        VBox form = new VBox(15);
+        form.setPadding(new Insets(16));
+        form.getStyleClass().add("portfolio-section");
+        
+        Label sectionTitle = new Label("NEW ORDER");
+        sectionTitle.getStyleClass().add("section-title");
+        form.getChildren().add(sectionTitle);
 
-    private void buildTradeForm() {
-        // ZAKŁADKI: Market Order | SL/TP
-        HBox tabsBox = new HBox();
-        tabsBox.setAlignment(Pos.CENTER);
-        tabsBox.setPadding(new Insets(0, 0, 15, 0));
-        HBox tabsBg = new HBox();
-        tabsBg.getStyleClass().add("xtb-tabs");
-        Button marketTab = new Button("Market order");
-        marketTab.getStyleClass().addAll("xtb-tab-btn", "xtb-tab-btn-active");
-        Button stopTab = new Button("SL / TP");
-        stopTab.getStyleClass().add("xtb-tab-btn");
-        tabsBg.getChildren().addAll(marketTab, stopTab);
-        tabsBox.getChildren().add(tabsBg);
-
-        // --- ZAKŁADKA 1: MARKET ORDER ---
-        VBox marketView = new VBox(0);
-
+        // Volume
         HBox volBox = new HBox();
         volBox.getStyleClass().add("xtb-volume-box");
         VBox volLeft = new VBox(2);
@@ -162,80 +148,61 @@ public class PortfolioPanel extends VBox {
         volRight.getChildren().addAll(minusBtn, centerVal, plusBtn);
         volBox.getChildren().addAll(volLeft, volRight);
 
-        // Sekcja ze spreadem i prowizją
-        HBox spreadBox = new HBox(4);
-        spreadBox.setAlignment(Pos.CENTER);
-        spreadBox.setPadding(new Insets(15, 0, 15, 0));
-        Label sLbl = new Label("Spread:");
-        sLbl.setStyle(
-                "-fx-text-fill: #8b949e; -fx-font-size: 13px; -fx-border-color: transparent transparent #8b949e transparent; -fx-border-style: dotted;");
-        spreadLbl.setStyle("-fx-text-fill: #e6edf3; -fx-font-size: 14px;");
-        spreadBox.getChildren().addAll(sLbl, spreadLbl);
-
-        GridPane infoGrid = new GridPane();
-        infoGrid.setVgap(15);
-        Label cLbl = new Label("Commission");
-        cLbl.getStyleClass().add("xtb-row-lbl");
-        cLbl.setStyle("-fx-border-color: transparent transparent #8b949e transparent; -fx-border-style: dotted;");
-        Label cVal = new Label("$0.00");
-        cVal.getStyleClass().add("xtb-row-val");
-
-        Label cvLbl = new Label("Contract value");
-        cvLbl.getStyleClass().add("xtb-row-lbl");
-        cvLbl.setStyle("-fx-border-color: transparent transparent #8b949e transparent; -fx-border-style: dotted;");
-        contractValueLbl.getStyleClass().add("xtb-row-val");
-
-        infoGrid.add(cLbl, 0, 0);
-        infoGrid.add(cVal, 1, 0);
-        infoGrid.add(cvLbl, 0, 1);
-        infoGrid.add(contractValueLbl, 1, 1);
-        ColumnConstraints cc0 = new ColumnConstraints();
-        ColumnConstraints cc1 = new ColumnConstraints();
-        cc1.setHgrow(Priority.ALWAYS);
-        cc1.setHalignment(javafx.geometry.HPos.RIGHT);
-        infoGrid.getColumnConstraints().addAll(cc0, cc1);
-
-        marketView.getChildren().addAll(volBox, spreadBox, infoGrid);
-
-        // --- ZAKŁADKA 2: SL / TP ---
-        VBox slTpView = new VBox(15);
-        slTpView.setPadding(new Insets(10, 0, 10, 0));
-        slTpView.setVisible(false);
-        slTpView.setManaged(false);
-
-        Label slDesc = new Label("Set Stop Loss and Take Profit levels.");
-        slDesc.setStyle("-fx-text-fill: #8b949e; -fx-font-size: 12px;");
-
+        // SL & TP Row
+        HBox slTpRow = new HBox(10);
+        
         VBox slBox = new VBox(5);
-        Label slFieldLbl = new Label("Stop Loss Price");
-        slFieldLbl.setStyle("-fx-text-fill: white; -fx-font-size: 12px;");
+        HBox.setHgrow(slBox, Priority.ALWAYS);
+        Label slFieldLbl = new Label("Stop Loss");
+        slFieldLbl.setStyle("-fx-text-fill: #8b949e; -fx-font-size: 11px;");
+        
+        HBox slInputBox = new HBox(2);
         slField.getStyleClass().addAll("trade-field", "sl-field");
-        slField.setPromptText("Stop Loss");
+        slField.setPromptText("0.00");
         slField.textProperty().addListener((o, old, val) -> {
-            try {
-                chartPanel.setSlPrice(Double.parseDouble(val));
-            } catch (Exception ignored) {
-            }
+            try { chartPanel.setPendingSlPrice(Double.parseDouble(val.replace(",", "."))); } catch (Exception ignored) {}
         });
-        slBox.getChildren().addAll(slFieldLbl, slField);
+        HBox.setHgrow(slField, Priority.ALWAYS);
+        Button slTargetBtn = new Button("⌖");
+        slTargetBtn.getStyleClass().add("target-btn");
+        slTargetBtn.setTooltip(new Tooltip("Set SL from chart"));
+        slTargetBtn.setOnAction(e -> {
+            chartPanel.setState(ChartPanel.ChartState.SELECTING_SL, price -> {
+                slField.setText(formatPrice(price));
+            });
+        });
+        slInputBox.getChildren().addAll(slField, slTargetBtn);
+        slBox.getChildren().addAll(slFieldLbl, slInputBox);
 
         VBox tpBox = new VBox(5);
-        Label tpFieldLbl = new Label("Take Profit Price");
-        tpFieldLbl.setStyle("-fx-text-fill: white; -fx-font-size: 12px;");
+        HBox.setHgrow(tpBox, Priority.ALWAYS);
+        Label tpFieldLbl = new Label("Take Profit");
+        tpFieldLbl.setStyle("-fx-text-fill: #8b949e; -fx-font-size: 11px;");
+        
+        HBox tpInputBox = new HBox(2);
         tpField.getStyleClass().addAll("trade-field", "tp-field");
-        tpField.setPromptText("Take Profit");
+        tpField.setPromptText("0.00");
         tpField.textProperty().addListener((o, old, val) -> {
-            try {
-                chartPanel.setTpPrice(Double.parseDouble(val));
-            } catch (Exception ignored) {
-            }
+            try { chartPanel.setPendingTpPrice(Double.parseDouble(val.replace(",", "."))); } catch (Exception ignored) {}
         });
-        tpBox.getChildren().addAll(tpFieldLbl, tpField);
+        HBox.setHgrow(tpField, Priority.ALWAYS);
+        Button tpTargetBtn = new Button("⌖");
+        tpTargetBtn.getStyleClass().add("target-btn");
+        tpTargetBtn.setTooltip(new Tooltip("Set TP from chart"));
+        tpTargetBtn.setOnAction(e -> {
+            chartPanel.setState(ChartPanel.ChartState.SELECTING_TP, price -> {
+                tpField.setText(formatPrice(price));
+            });
+        });
+        tpInputBox.getChildren().addAll(tpField, tpTargetBtn);
+        tpBox.getChildren().addAll(tpFieldLbl, tpInputBox);
 
-        Button applySlTpBtn = new Button("Update Open Position");
-        applySlTpBtn.setStyle("-fx-background-color: #21262d; -fx-text-fill: white; -fx-border-color: #30363d; -fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 8 16; -fx-font-weight: bold; -fx-cursor: hand;");
-        applySlTpBtn.setMaxWidth(Double.MAX_VALUE);
-        applySlTpBtn.setOnAction(e -> {
+        slTpRow.getChildren().addAll(slBox, tpBox);
+        
+        Button updateSlTpBtn = new Button("Update Open Position SL/TP");
+        updateSlTpBtn.setStyle("-fx-background-color: #21262d; -fx-text-fill: white; -fx-border-color: #30363d; -fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 6 12; -fx-font-weight: bold; -fx-cursor: hand;");
+        updateSlTpBtn.setMaxWidth(Double.MAX_VALUE);
+        updateSlTpBtn.setOnAction(e -> {
             double sl = parseDouble(slField.getText());
             double tp = parseDouble(tpField.getText());
             boolean applied = false;
@@ -248,60 +215,93 @@ public class PortfolioPanel extends VBox {
             }
             if (applied) {
                 refresh();
-                showAlert("Zaktualizowano", "Zaktualizowano SL/TP dla otwartej pozycji.");
+                showAlert("Updated", "Zaktualizowano SL/TP dla otwartej pozycji.");
             } else {
-                showAlert("Brak pozycji", "Nie masz otwartej pozycji na tym instrumencie.");
+                showAlert("No Position", "Nie masz otwartej pozycji na tym instrumencie.");
             }
         });
 
-        slTpView.getChildren().addAll(slDesc, slBox, tpBox, applySlTpBtn);
+        // Spread
+        HBox spreadBox = new HBox(4);
+        spreadBox.setAlignment(Pos.CENTER);
+        spreadBox.setPadding(new Insets(5, 0, 5, 0));
+        Label sLbl = new Label("Spread:");
+        sLbl.setStyle("-fx-text-fill: #8b949e; -fx-font-size: 12px;");
+        spreadLbl.setStyle("-fx-text-fill: #e6edf3; -fx-font-size: 12px;");
+        spreadBox.getChildren().addAll(sLbl, spreadLbl);
 
-        // Przełączanie zakładek
-        marketTab.setOnAction(e -> {
-            marketTab.getStyleClass().add("xtb-tab-btn-active");
-            stopTab.getStyleClass().remove("xtb-tab-btn-active");
-            marketView.setVisible(true);
-            marketView.setManaged(true);
-            slTpView.setVisible(false);
-            slTpView.setManaged(false);
-        });
-        stopTab.setOnAction(e -> {
-            stopTab.getStyleClass().add("xtb-tab-btn-active");
-            marketTab.getStyleClass().remove("xtb-tab-btn-active");
-            marketView.setVisible(false);
-            marketView.setManaged(false);
-            slTpView.setVisible(true);
-            slTpView.setManaged(true);
-        });
-
-        // PRZYCISKI BUY/SELL
+        // Funds and Buy Button
         HBox fundsBox = new HBox(4);
         fundsBox.setAlignment(Pos.CENTER);
-        fundsBox.setPadding(new Insets(20, 0, 10, 0));
-        Label fLbl = new Label("Available funds:");
+        Label fLbl = new Label("Available:");
         fLbl.getStyleClass().add("xtb-funds");
         availableFundsLbl.getStyleClass().add("xtb-funds-val");
         fundsBox.getChildren().addAll(fLbl, availableFundsLbl);
 
-        HBox buttonsBox = new HBox(10);
         VBox buyBtn = new VBox(2);
         buyBtn.getStyleClass().add("xtb-btn-buy");
         buyBtn.setAlignment(Pos.CENTER);
         buyBtn.setPadding(new Insets(10, 0, 10, 0));
-        HBox.setHgrow(buyBtn, Priority.ALWAYS);
         Label buyTitle = new Label("Buy");
         buyTitle.getStyleClass().add("xtb-btn-title");
         buyPriceLbl.getStyleClass().add("xtb-btn-price");
         buyBtn.getChildren().addAll(buyTitle, buyPriceLbl);
         buyBtn.setOnMouseClicked(e -> placeOrder(true));
 
-        buttonsBox.getChildren().addAll(buyBtn);
+        form.getChildren().addAll(volBox, slTpRow, updateSlTpBtn, spreadBox, fundsBox, buyBtn);
+        this.getChildren().add(form);
+    }
 
-        VBox formContainer = new VBox(0, marketView, slTpView);
-
-        VBox section = new VBox(0, tabsBox, formContainer, fundsBox, buttonsBox);
+    private void buildPositionsAndHistorySection() {
+        VBox section = new VBox(0);
         section.getStyleClass().add("portfolio-section");
-        section.setPadding(new Insets(16));
+        VBox.setVgrow(section, Priority.ALWAYS);
+
+        HBox tabs = new HBox(10);
+        tabs.setPadding(new Insets(14, 16, 6, 16));
+        Label openTab = new Label("OPEN POSITIONS");
+        Label historyTab = new Label("HISTORY");
+        openTab.getStyleClass().addAll("section-title", "tab-active");
+        historyTab.getStyleClass().addAll("section-title", "tab-inactive");
+        
+        tabs.getChildren().addAll(openTab, historyTab);
+
+        positionsList.setItems(portfolio.openPositions);
+        positionsList.getStyleClass().add("positions-list");
+        positionsList.setCellFactory(lv -> new PositionCell());
+        VBox.setVgrow(positionsList, Priority.ALWAYS);
+        
+        historyList.setItems(portfolio.closedPositions);
+        historyList.getStyleClass().add("positions-list");
+        historyList.setCellFactory(lv -> new ClosedPositionCell());
+        VBox.setVgrow(historyList, Priority.ALWAYS);
+        
+        historyList.setVisible(false);
+        historyList.setManaged(false);
+        
+        openTab.setOnMouseClicked(e -> {
+            openTab.getStyleClass().remove("tab-inactive");
+            openTab.getStyleClass().add("tab-active");
+            historyTab.getStyleClass().remove("tab-active");
+            historyTab.getStyleClass().add("tab-inactive");
+            positionsList.setVisible(true);
+            positionsList.setManaged(true);
+            historyList.setVisible(false);
+            historyList.setManaged(false);
+        });
+        
+        historyTab.setOnMouseClicked(e -> {
+            historyTab.getStyleClass().remove("tab-inactive");
+            historyTab.getStyleClass().add("tab-active");
+            openTab.getStyleClass().remove("tab-active");
+            openTab.getStyleClass().add("tab-inactive");
+            positionsList.setVisible(false);
+            positionsList.setManaged(false);
+            historyList.setVisible(true);
+            historyList.setManaged(true);
+        });
+
+        section.getChildren().addAll(tabs, positionsList, historyList);
         this.getChildren().add(section);
     }
 
@@ -317,6 +317,7 @@ public class PortfolioPanel extends VBox {
             buyPriceLbl.setText("0.00");
             contractValueLbl.setText("≈ $0.00");
             spreadLbl.setText("$0.00 / 0 PIPS");
+            chartPanel.hidePendingPreview();
             return;
         }
 
@@ -334,25 +335,15 @@ public class PortfolioPanel extends VBox {
         double spread = ask - bid;
         double spreadUsd = spread * qty;
         int pips = (int) (spread / (price * 0.0001));
-        if (pips <= 0)
-            pips = 2;
+        if (pips <= 0) pips = 2;
         spreadLbl.setText(String.format("$%.2f / %d PIPS", spreadUsd, pips));
+        
+        if (qty > 0) {
+            chartPanel.setPendingPreview(ask, true);
+        } else {
+            chartPanel.hidePendingPreview();
+        }
     }
-
-    private void buildPositionsList() {
-        Label sectionTitle = new Label("OPEN POSITIONS");
-        sectionTitle.getStyleClass().add("section-title");
-        sectionTitle.setPadding(new Insets(14, 16, 6, 16));
-
-        positionsList.setItems(portfolio.openPositions);
-        positionsList.getStyleClass().add("positions-list");
-        positionsList.setCellFactory(lv -> new PositionCell());
-        VBox.setVgrow(positionsList, Priority.ALWAYS);
-
-        this.getChildren().addAll(sectionTitle, positionsList);
-    }
-
-    // ── Zlecenia giełdowe ─────────────────────────────────────────────────
 
     private void placeOrder(boolean isLong) {
         if (selectedInstrument == null) {
@@ -369,24 +360,24 @@ public class PortfolioPanel extends VBox {
         double sl = parseDouble(slField.getText());
         double tp = parseDouble(tpField.getText());
 
-        double currentPrice = selectedInstrument.getAsk(); // Cena po jakiej kupujemy
+        double currentPrice = selectedInstrument.getAsk();
         if (isLong) {
-            if (sl >= currentPrice)
-                sl = 0.0;
-            if (tp > 0 && tp <= currentPrice)
-                tp = 0.0;
+            if (sl >= currentPrice) sl = 0.0;
+            if (tp > 0 && tp <= currentPrice) tp = 0.0;
         } else {
-            if (sl > 0 && sl <= currentPrice)
-                sl = 0.0;
-            if (tp > 0 && tp >= currentPrice)
-                tp = 0.0;
+            if (sl > 0 && sl <= currentPrice) sl = 0.0;
+            if (tp > 0 && tp >= currentPrice) tp = 0.0;
         }
 
         portfolio.openPosition(selectedInstrument, isLong, qty, sl, tp);
+        
+        // Reset formularza
+        slField.setText("");
+        tpField.setText("");
+        chartPanel.setPendingSlPrice(0);
+        chartPanel.setPendingTpPrice(0);
+        
         refresh();
-
-        Position pos = portfolio.openPositions.get(portfolio.openPositions.size() - 1);
-        chartPanel.showPositionLines(pos);
     }
 
     private double parseDouble(String text) {
@@ -398,11 +389,9 @@ public class PortfolioPanel extends VBox {
     }
 
     private String formatPrice(double p) {
-        if (p < 1)
-            return String.format("%.5f", p);
-        if (p < 100)
-            return String.format("%.4f", p);
-        return String.format("%.2f", p);
+        if (p < 1) return String.format(java.util.Locale.US, "%.5f", p);
+        if (p < 100) return String.format(java.util.Locale.US, "%.4f", p);
+        return String.format(java.util.Locale.US, "%.2f", p);
     }
 
     private void showAlert(String title, String msg) {
@@ -413,7 +402,7 @@ public class PortfolioPanel extends VBox {
         alert.showAndWait();
     }
 
-    // ── Komórka listy pozycji ─────────────────────────────────────────────
+    // ── Komórka listy aktywnych pozycji ─────────────────────────────────────────────
 
     private class PositionCell extends ListCell<Position> {
         private final VBox root = new VBox(4);
@@ -444,6 +433,10 @@ public class PortfolioPanel extends VBox {
                 Position pos = getItem();
                 if (pos != null) {
                     portfolio.closePosition(pos);
+                    slField.setText("");
+                    tpField.setText("");
+                    chartPanel.setPendingSlPrice(0);
+                    chartPanel.setPendingTpPrice(0);
                     PortfolioPanel.this.refresh();
                 }
             });
@@ -468,9 +461,70 @@ public class PortfolioPanel extends VBox {
             pnlLabel.getStyleClass().removeAll("pos-pnl-positive", "pos-pnl-negative");
             pnlLabel.getStyleClass().add(pnl >= 0 ? "pos-pnl-positive" : "pos-pnl-negative");
 
-            infoLabel.setText(String.format("%.4f @ %.2f  SL:%.2f  TP:%.2f",
+            infoLabel.setText(String.format(java.util.Locale.US, "%.4f @ %.2f  SL:%.2f  TP:%.2f",
                     pos.getQuantity(), pos.getEntryPrice(),
                     pos.getStopLoss(), pos.getTakeProfit()));
+
+            setGraphic(root);
+            setPadding(new Insets(4, 8, 4, 8));
+        }
+    }
+    
+    // ── Komórka listy zamkniętych pozycji (Historia) ─────────────────────────────────────────────
+
+    private class ClosedPositionCell extends ListCell<ClosedPosition> {
+        private final VBox root = new VBox(4);
+        private final HBox top = new HBox(8);
+        private final HBox bottom = new HBox(8);
+        private final Label symLabel = new Label();
+        private final Label dirLabel = new Label();
+        private final Label pnlLabel = new Label();
+        private final Label infoLabel = new Label();
+        private final Label dateLabel = new Label();
+
+        ClosedPositionCell() {
+            symLabel.getStyleClass().add("pos-symbol");
+            pnlLabel.getStyleClass().add("pos-pnl-positive");
+            infoLabel.setStyle("-fx-text-fill: #8b949e; -fx-font-size: 11px;");
+            dateLabel.setStyle("-fx-text-fill: #8b949e; -fx-font-size: 10px;");
+            dirLabel.setStyle("-fx-font-size: 11px; -fx-font-weight: 700;");
+
+            Region sp = new Region();
+            HBox.setHgrow(sp, Priority.ALWAYS);
+            top.getChildren().addAll(dirLabel, symLabel, sp, pnlLabel);
+            
+            Region sp2 = new Region();
+            HBox.setHgrow(sp2, Priority.ALWAYS);
+            bottom.getChildren().addAll(infoLabel, sp2, dateLabel);
+            
+            root.getChildren().addAll(top, bottom);
+            root.getStyleClass().add("position-cell");
+            root.setPadding(new Insets(8, 10, 8, 10));
+        }
+
+        @Override
+        protected void updateItem(ClosedPosition pos, boolean empty) {
+            super.updateItem(pos, empty);
+            if (empty || pos == null) {
+                setGraphic(null);
+                return;
+            }
+
+            symLabel.setText(pos.getInstrument().getSymbol());
+            dirLabel.setText(pos.isLong() ? "▲ BUY" : "▼ SELL");
+            dirLabel.setStyle("-fx-text-fill: #8b949e; -fx-font-size: 11px; -fx-font-weight: 700;");
+
+            double pnl = pos.getRealizedPnl();
+            String sign = pnl >= 0 ? "+" : "";
+            pnlLabel.setText(sign + "$" + String.format("%.2f", pnl));
+            pnlLabel.getStyleClass().removeAll("pos-pnl-positive", "pos-pnl-negative");
+            pnlLabel.getStyleClass().add(pnl >= 0 ? "pos-pnl-positive" : "pos-pnl-negative");
+
+            infoLabel.setText(String.format(java.util.Locale.US, "%.4f | Open: %.2f | Close: %.2f",
+                    pos.getQuantity(), pos.getEntryPrice(), pos.getClosePrice()));
+                    
+            DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd-MM-yy HH:mm");
+            dateLabel.setText(pos.getCloseDate().format(fmt));
 
             setGraphic(root);
             setPadding(new Insets(4, 8, 4, 8));

@@ -5,9 +5,11 @@ import com.stockdemo.model.Instrument;
 import com.stockdemo.model.Position;
 import com.stockdemo.service.MarketDataService;
 import javafx.geometry.Pos;
+import javafx.scene.Cursor;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.*;
+import javafx.scene.input.KeyCode;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
@@ -19,15 +21,21 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.function.Consumer;
 
 public class ChartPanel extends BorderPane {
+
+    public enum ChartState {
+        IDLE, SELECTING_SL, SELECTING_TP
+    }
 
     private static final Color BG = Color.web("#0d1117");
     private static final Color GRID = Color.web("#21262d");
     private static final Color AXIS_TEXT = Color.web("#8b949e");
     private static final Color BULL = Color.web("#26a69a");
     private static final Color BEAR = Color.web("#ef5350");
-    private static final Color LINE_COLOR = Color.web("#1f6feb");
+    private static final Color LINE_COLOR = Color.web("#8b949e");
+    private static final Color ENTRY_COLOR = Color.web("#1f6feb");
     private static final Color SL_COLOR = Color.web("#f85149");
     private static final Color TP_COLOR = Color.web("#3fb950");
     private static final Color CROSS = Color.web("#30363d");
@@ -44,11 +52,24 @@ public class ChartPanel extends BorderPane {
     private String activeRange = "1M";
     private boolean showCandles = true;
 
-    private double slPrice = 0;
-    private double tpPrice = 0;
-    private boolean draggingSL = false;
-    private boolean draggingTP = false;
-    private Runnable onSlTpChanged;
+    private ChartState state = ChartState.IDLE;
+    private Consumer<Double> onPriceSelected;
+
+    // Pending order preview
+    private double pendingSlPrice = 0;
+    private double pendingTpPrice = 0;
+    private double pendingEntryPrice = 0; 
+    private boolean showPendingPreview = false;
+    private Runnable onPendingSlTpChanged;
+
+    // Open positions for current instrument
+    private List<Position> openPositions = new ArrayList<>();
+    
+    // Dragging state
+    private boolean draggingPendingSL = false;
+    private boolean draggingPendingTP = false;
+    private Position draggedPosSL = null;
+    private Position draggedPosTP = null;
 
     private double crossX = -1, crossY = -1;
     private double minPrice, maxPrice;
@@ -62,6 +83,14 @@ public class ChartPanel extends BorderPane {
     public ChartPanel(MarketDataService marketData) {
         this.marketData = marketData;
         this.setId("chartPanel");
+        
+        // Ensure panel can receive key events for ESC
+        this.setFocusTraversable(true);
+        this.setOnKeyPressed(e -> {
+            if (e.getCode() == KeyCode.ESCAPE && state != ChartState.IDLE) {
+                setState(ChartState.IDLE, null);
+            }
+        });
 
         symbolLabel.setId("chartSymbolLabel");
         priceLabel.setId("chartPriceLabel");
@@ -131,88 +160,128 @@ public class ChartPanel extends BorderPane {
             redraw();
         });
         canvas.setOnMousePressed(e -> {
-            double slY = priceToY(slPrice);
-            double tpY = priceToY(tpPrice);
-            if (slPrice > 0 && Math.abs(e.getY() - slY) < DRAG_HIT)
-                draggingSL = true;
-            else if (tpPrice > 0 && Math.abs(e.getY() - tpY) < DRAG_HIT)
-                draggingTP = true;
+            this.requestFocus(); // For ESC key
+            
+            if (state != ChartState.IDLE) {
+                double price = yToPrice(e.getY());
+                if (onPriceSelected != null) {
+                    onPriceSelected.accept(price);
+                }
+                setState(ChartState.IDLE, null);
+                return;
+            }
+
+            // Check dragging hits
+            double my = e.getY();
+            
+            // Check open positions first
+            for (Position p : openPositions) {
+                if (p.getInstrument().equals(currentInstrument)) {
+                    if (p.getStopLoss() > 0 && Math.abs(my - priceToY(p.getStopLoss())) < DRAG_HIT) {
+                        draggedPosSL = p;
+                        return;
+                    }
+                    if (p.getTakeProfit() > 0 && Math.abs(my - priceToY(p.getTakeProfit())) < DRAG_HIT) {
+                        draggedPosTP = p;
+                        return;
+                    }
+                }
+            }
+            
+            // Check pending order lines
+            if (pendingSlPrice > 0 && Math.abs(my - priceToY(pendingSlPrice)) < DRAG_HIT) {
+                draggingPendingSL = true;
+                return;
+            }
+            if (pendingTpPrice > 0 && Math.abs(my - priceToY(pendingTpPrice)) < DRAG_HIT) {
+                draggingPendingTP = true;
+                return;
+            }
         });
         canvas.setOnMouseDragged(e -> {
             crossX = e.getX();
             crossY = e.getY();
-            if (draggingSL) {
-                slPrice = yToPrice(e.getY());
-                if (onSlTpChanged != null)
-                    onSlTpChanged.run();
-            }
-            if (draggingTP) {
-                tpPrice = yToPrice(e.getY());
-                if (onSlTpChanged != null)
-                    onSlTpChanged.run();
+            double price = yToPrice(e.getY());
+
+            if (draggedPosSL != null) {
+                draggedPosSL.setStopLoss(price);
+            } else if (draggedPosTP != null) {
+                draggedPosTP.setTakeProfit(price);
+            } else if (draggingPendingSL) {
+                pendingSlPrice = price;
+                if (onPendingSlTpChanged != null) onPendingSlTpChanged.run();
+            } else if (draggingPendingTP) {
+                pendingTpPrice = price;
+                if (onPendingSlTpChanged != null) onPendingSlTpChanged.run();
             }
             redraw();
         });
         canvas.setOnMouseReleased(e -> {
-            draggingSL = false;
-            draggingTP = false;
+            draggingPendingSL = false;
+            draggingPendingTP = false;
+            draggedPosSL = null;
+            draggedPosTP = null;
         });
 
         this.setTop(toolbar);
         this.setCenter(canvasPane);
     }
-
-    public void loadInstrument(Instrument instrument) {
-        this.currentInstrument = instrument;
-        symbolLabel.setText(instrument.getSymbol());
-        slPrice = 0;
-        tpPrice = 0;
-        loadChart();
-    }
-
-    public void setSlPrice(double price) {
-        this.slPrice = price;
-        redraw();
-    }
-
-    public void setTpPrice(double price) {
-        this.tpPrice = price;
-        redraw();
-    }
-
-    public double getSlPrice() {
-        return slPrice;
-    }
-
-    public double getTpPrice() {
-        return tpPrice;
-    }
-
-    public void setOnSlTpChanged(Runnable r) {
-        this.onSlTpChanged = r;
-    }
-
-    public void showPositionLines(Position pos) {
-        if (pos == null) {
-            slPrice = 0;
-            tpPrice = 0;
+    
+    public void setState(ChartState newState, Consumer<Double> callback) {
+        this.state = newState;
+        this.onPriceSelected = callback;
+        if (state != ChartState.IDLE) {
+            canvas.setCursor(Cursor.CROSSHAIR);
         } else {
-            slPrice = pos.getStopLoss();
-            tpPrice = pos.getTakeProfit();
-            pos.stopLossProperty().addListener((o, old, v) -> {
-                slPrice = v.doubleValue();
-                redraw();
-            });
-            pos.takeProfitProperty().addListener((o, old, v) -> {
-                tpPrice = v.doubleValue();
-                redraw();
-            });
+            canvas.setCursor(Cursor.DEFAULT);
         }
         redraw();
     }
 
+    public void loadInstrument(Instrument instrument) {
+        this.currentInstrument = instrument;
+        symbolLabel.setText(instrument.getSymbol());
+        pendingSlPrice = 0;
+        pendingTpPrice = 0;
+        showPendingPreview = false;
+        loadChart();
+    }
+
+    public void setPendingSlPrice(double price) {
+        this.pendingSlPrice = price;
+        redraw();
+    }
+
+    public void setPendingTpPrice(double price) {
+        this.pendingTpPrice = price;
+        redraw();
+    }
+    
+    public void setPendingPreview(double entryPrice, boolean isLong) {
+        this.pendingEntryPrice = entryPrice;
+        this.showPendingPreview = true;
+        redraw();
+    }
+    
+    public void hidePendingPreview() {
+        this.showPendingPreview = false;
+        redraw();
+    }
+
+    public double getPendingSlPrice() { return pendingSlPrice; }
+    public double getPendingTpPrice() { return pendingTpPrice; }
+
+    public void setOnPendingSlTpChanged(Runnable r) {
+        this.onPendingSlTpChanged = r;
+    }
+
+    public void setOpenPositions(List<Position> positions) {
+        this.openPositions = positions;
+        redraw();
+    }
+
     public void refreshPrice(Instrument inst) {
-        if (inst == null)
+        if (inst == null || currentInstrument == null || !inst.getSymbol().equals(currentInstrument.getSymbol()))
             return;
         double p = inst.getPrice();
         double ch = inst.getChangePercent();
@@ -221,6 +290,11 @@ public class ChartPanel extends BorderPane {
         changeLabel.setText(sign + String.format(Locale.US, "%.2f%%", ch));
         changeLabel.getStyleClass().removeAll("change-positive", "change-negative");
         changeLabel.getStyleClass().add(ch >= 0 ? "change-positive" : "change-negative");
+        
+        // Update pending preview if following market
+        if (showPendingPreview && currentInstrument != null) {
+            redraw(); // Simple redraw will fetch latest ask/bid if needed
+        }
     }
 
     private void loadChart() {
@@ -272,8 +346,10 @@ public class ChartPanel extends BorderPane {
         else
             drawLine(gc, cX, cY, cW, cH);
 
-        drawSlTpLines(gc, cX, cY, cW, cH, W);
-        drawCrosshair(gc, cX, cY, cW, cH, W, H, priceSpan);
+        drawPositions(gc, cX, cY, cW, cH);
+        drawPendingLines(gc, cX, cY, cW, cH);
+        
+        drawCrosshairAndSelection(gc, cX, cY, cW, cH, W, H);
         drawAxisLabels(gc, cX, cY, cW, cH, W, priceSpan);
     }
 
@@ -338,37 +414,104 @@ public class ChartPanel extends BorderPane {
         }
         gc.stroke();
     }
+    
+    private void drawPositions(GraphicsContext gc, double cX, double cY, double cW, double cH) {
+        if (currentInstrument == null) return;
+        
+        for (Position p : openPositions) {
+            if (!p.getInstrument().getSymbol().equals(currentInstrument.getSymbol())) continue;
+            
+            // Draw Entry Line
+            double entryY = priceToYInArea(p.getEntryPrice(), cY, cH);
+            if (entryY >= cY && entryY <= cY + cH) {
+                gc.setStroke(ENTRY_COLOR);
+                gc.setLineWidth(1.5);
+                gc.strokeLine(cX, entryY, cX + cW, entryY);
+                gc.setFill(ENTRY_COLOR);
+                gc.setFont(Font.font("Inter", FontWeight.BOLD, 10));
+                gc.fillText("Entry " + formatPrice(p.getEntryPrice()), cX + 5, entryY - 4);
+            }
+            
+            // Draw SL Line
+            if (p.getStopLoss() > 0) {
+                double slY = priceToYInArea(p.getStopLoss(), cY, cH);
+                if (slY >= cY && slY <= cY + cH) {
+                    gc.setStroke(SL_COLOR);
+                    gc.setLineWidth(1.5);
+                    gc.setLineDashes(4, 4);
+                    gc.strokeLine(cX, slY, cX + cW, slY);
+                    gc.setLineDashes();
+                    gc.setFill(SL_COLOR);
+                    gc.setFont(Font.font("Inter", FontWeight.BOLD, 10));
+                    gc.fillText("SL " + formatPrice(p.getStopLoss()), cX + cW + 4, slY + 4);
+                }
+            }
+            
+            // Draw TP Line
+            if (p.getTakeProfit() > 0) {
+                double tpY = priceToYInArea(p.getTakeProfit(), cY, cH);
+                if (tpY >= cY && tpY <= cY + cH) {
+                    gc.setStroke(TP_COLOR);
+                    gc.setLineWidth(1.5);
+                    gc.setLineDashes(4, 4);
+                    gc.strokeLine(cX, tpY, cX + cW, tpY);
+                    gc.setLineDashes();
+                    gc.setFill(TP_COLOR);
+                    gc.setFont(Font.font("Inter", FontWeight.BOLD, 10));
+                    gc.fillText("TP " + formatPrice(p.getTakeProfit()), cX + cW + 4, tpY + 4);
+                }
+            }
+        }
+    }
 
-    private void drawSlTpLines(GraphicsContext gc, double cX, double cY, double cW, double cH, double W) {
-        if (slPrice > 0 && slPrice >= minPrice && slPrice <= maxPrice) {
-            double y = priceToYInArea(slPrice, cY, cH);
-            gc.setStroke(SL_COLOR);
+    private void drawPendingLines(GraphicsContext gc, double cX, double cY, double cW, double cH) {
+        if (showPendingPreview && pendingEntryPrice > 0) {
+            double entryY = priceToYInArea(pendingEntryPrice, cY, cH);
+            if (entryY >= cY && entryY <= cY + cH) {
+                gc.setStroke(ENTRY_COLOR.deriveColor(1, 1, 1, 0.6)); // Transparent blue
+                gc.setLineWidth(1.5);
+                gc.setLineDashes(6, 4);
+                gc.strokeLine(cX, entryY, cX + cW, entryY);
+                gc.setLineDashes();
+                gc.setFill(ENTRY_COLOR.deriveColor(1, 1, 1, 0.8));
+                gc.setFont(Font.font("Inter", FontWeight.NORMAL, 10));
+                gc.fillText("New Entry " + formatPrice(pendingEntryPrice), cX + 5, entryY - 4);
+            }
+        }
+
+        if (pendingSlPrice > 0 && pendingSlPrice >= minPrice && pendingSlPrice <= maxPrice) {
+            double y = priceToYInArea(pendingSlPrice, cY, cH);
+            gc.setStroke(SL_COLOR.deriveColor(1, 1, 1, 0.6));
             gc.setLineWidth(1.5);
             gc.setLineDashes(6, 4);
             gc.strokeLine(cX, y, cX + cW, y);
             gc.setLineDashes();
             gc.setFill(SL_COLOR);
-            gc.setFont(Font.font("Inter", FontWeight.BOLD, 11));
-            gc.fillText("SL " + formatPrice(slPrice), cX + cW + 4, y + 4);
+            gc.setFont(Font.font("Inter", FontWeight.NORMAL, 10));
+            gc.fillText("SL " + formatPrice(pendingSlPrice), cX + cW + 4, y + 4);
         }
-        if (tpPrice > 0 && tpPrice >= minPrice && tpPrice <= maxPrice) {
-            double y = priceToYInArea(tpPrice, cY, cH);
-            gc.setStroke(TP_COLOR);
+        if (pendingTpPrice > 0 && pendingTpPrice >= minPrice && pendingTpPrice <= maxPrice) {
+            double y = priceToYInArea(pendingTpPrice, cY, cH);
+            gc.setStroke(TP_COLOR.deriveColor(1, 1, 1, 0.6));
             gc.setLineWidth(1.5);
             gc.setLineDashes(6, 4);
             gc.strokeLine(cX, y, cX + cW, y);
             gc.setLineDashes();
             gc.setFill(TP_COLOR);
-            gc.setFont(Font.font("Inter", FontWeight.BOLD, 11));
-            gc.fillText("TP " + formatPrice(tpPrice), cX + cW + 4, y + 4);
+            gc.setFont(Font.font("Inter", FontWeight.NORMAL, 10));
+            gc.fillText("TP " + formatPrice(pendingTpPrice), cX + cW + 4, y + 4);
         }
     }
 
-    private void drawCrosshair(GraphicsContext gc, double cX, double cY, double cW, double cH, double W, double H,
-            double priceSpan) {
+    private void drawCrosshairAndSelection(GraphicsContext gc, double cX, double cY, double cW, double cH, double W, double H) {
         if (crossX < cX || crossX > cX + cW || crossY < cY || crossY > cY + cH)
             return;
-        gc.setStroke(CROSS);
+            
+        Color crossColor = CROSS;
+        if (state == ChartState.SELECTING_SL) crossColor = SL_COLOR;
+        else if (state == ChartState.SELECTING_TP) crossColor = TP_COLOR;
+
+        gc.setStroke(crossColor);
         gc.setLineWidth(0.7);
         gc.setLineDashes(3, 3);
         gc.strokeLine(cX, crossY, cX + cW, crossY);
@@ -376,11 +519,19 @@ public class ChartPanel extends BorderPane {
         gc.setLineDashes();
 
         double price = yToPrice(crossY);
-        gc.setFill(Color.web("#30363d"));
+        gc.setFill(crossColor.equals(CROSS) ? Color.web("#30363d") : crossColor.deriveColor(1,1,1,0.8));
         gc.fillRoundRect(cX + cW + 2, crossY - 9, 58, 18, 4, 4);
-        gc.setFill(AXIS_TEXT);
-        gc.setFont(Font.font("Inter", 10));
+        
+        gc.setFill(state == ChartState.IDLE ? AXIS_TEXT : Color.WHITE);
+        gc.setFont(Font.font("Inter", FontWeight.BOLD, 10));
         gc.fillText(formatPrice(price), cX + cW + 6, crossY + 5);
+        
+        if (state != ChartState.IDLE) {
+            gc.setFill(crossColor);
+            gc.fillText(state == ChartState.SELECTING_SL ? "Click to set SL" : "Click to set TP", crossX + 10, crossY - 10);
+            gc.setFont(Font.font("Inter", 10));
+            gc.fillText("Press ESC to cancel", crossX + 10, crossY + 15);
+        }
     }
 
     private void drawAxisLabels(GraphicsContext gc, double cX, double cY, double cW, double cH, double W,
