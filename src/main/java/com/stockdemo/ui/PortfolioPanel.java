@@ -46,10 +46,18 @@ public class PortfolioPanel extends VBox {
         buildTradeForm();
         buildPositionsList();
 
-        // Kiedy ruszasz liniami SL/TP na wykresie, aktualizuj pola tekstowe!
         chartPanel.setOnSlTpChanged(() -> {
             slField.setText(formatPrice(chartPanel.getSlPrice()));
             tpField.setText(formatPrice(chartPanel.getTpPrice()));
+            
+            // Aktualizuj SL/TP dla otwartej pozycji (jeśli istnieje) na wybranym instrumencie
+            for (Position p : portfolio.openPositions) {
+                if (p.getInstrument().equals(selectedInstrument)) {
+                    p.setStopLoss(chartPanel.getSlPrice());
+                    p.setTakeProfit(chartPanel.getTpPrice());
+                }
+            }
+            refresh();
         });
 
         // Odświeżaj listę pozycji automatycznie
@@ -224,7 +232,29 @@ public class PortfolioPanel extends VBox {
         });
         tpBox.getChildren().addAll(tpFieldLbl, tpField);
 
-        slTpView.getChildren().addAll(slDesc, slBox, tpBox);
+        Button applySlTpBtn = new Button("Update Open Position");
+        applySlTpBtn.setStyle("-fx-background-color: #21262d; -fx-text-fill: white; -fx-border-color: #30363d; -fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 8 16; -fx-font-weight: bold; -fx-cursor: hand;");
+        applySlTpBtn.setMaxWidth(Double.MAX_VALUE);
+        applySlTpBtn.setOnAction(e -> {
+            double sl = parseDouble(slField.getText());
+            double tp = parseDouble(tpField.getText());
+            boolean applied = false;
+            for (Position p : portfolio.openPositions) {
+                if (p.getInstrument().equals(selectedInstrument)) {
+                    p.setStopLoss(sl);
+                    p.setTakeProfit(tp);
+                    applied = true;
+                }
+            }
+            if (applied) {
+                refresh();
+                showAlert("Zaktualizowano", "Zaktualizowano SL/TP dla otwartej pozycji.");
+            } else {
+                showAlert("Brak pozycji", "Nie masz otwartej pozycji na tym instrumencie.");
+            }
+        });
+
+        slTpView.getChildren().addAll(slDesc, slBox, tpBox, applySlTpBtn);
 
         // Przełączanie zakładek
         marketTab.setOnAction(e -> {
@@ -339,7 +369,7 @@ public class PortfolioPanel extends VBox {
         double sl = parseDouble(slField.getText());
         double tp = parseDouble(tpField.getText());
 
-        double currentPrice = selectedInstrument.getPrice();
+        double currentPrice = selectedInstrument.getAsk(); // Cena po jakiej kupujemy
         if (isLong) {
             if (sl >= currentPrice)
                 sl = 0.0;
