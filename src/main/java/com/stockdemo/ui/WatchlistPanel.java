@@ -225,7 +225,7 @@ public class WatchlistPanel extends VBox {
 
             double p = inst.getPrice();
             double ch = inst.getChangePercent();
-            price.setText(p > 0 ? formatPrice(p) : "—");
+            price.setText(WatchlistPanel.formatPrice(p));
 
             String sign = ch >= 0 ? "+" : "";
             change.setText(sign + String.format("%.2f%%", ch));
@@ -250,23 +250,15 @@ public class WatchlistPanel extends VBox {
 
             setGraphic(root);
         }
-
-        private String formatPrice(double p) {
-            if (p < 1)
-                return String.format("%.5f", p);
-            if (p < 100)
-                return String.format("%.4f", p);
-            return String.format("%.2f", p);
-        }
     }
 
-    private String formatPrice(double p) {
+    public static String formatPrice(double p) {
         if (p <= 0)
             return "—";
         if (p < 1)
-            return String.format("%.5f", p);
+            return String.format(java.util.Locale.US, "%.5f", p);
         if (p < 100)
-            return String.format("%.4f", p);
-        return String.format("%.2f", p);
+            return String.format(java.util.Locale.US, "%.4f", p);
+        return String.format(java.util.Locale.US, "%.2f", p);
     }
 }

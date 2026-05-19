@@ -326,8 +326,8 @@ public class ChartPanel extends BorderPane {
             return;
         }
 
-        minPrice = candles.stream().mapToDouble(Candle::getLow).min().orElse(0);
-        maxPrice = candles.stream().mapToDouble(Candle::getHigh).max().orElse(1);
+        minPrice = candles.stream().mapToDouble(Candle::low).min().orElse(0);
+        maxPrice = candles.stream().mapToDouble(Candle::high).max().orElse(1);
         double priceSpan = maxPrice - minPrice;
         if (priceSpan == 0)
             priceSpan = 1;
@@ -376,10 +376,10 @@ public class ChartPanel extends BorderPane {
         for (int i = 0; i < n; i++) {
             Candle c = candles.get(i);
             double cx = startX + (i + 0.5) * totalW;
-            double oY = priceToYInArea(c.getOpen(), cY, cH);
-            double cY2 = priceToYInArea(c.getClose(), cY, cH);
-            double hY = priceToYInArea(c.getHigh(), cY, cH);
-            double lY = priceToYInArea(c.getLow(), cY, cH);
+            double oY = priceToYInArea(c.open(), cY, cH);
+            double cY2 = priceToYInArea(c.close(), cY, cH);
+            double hY = priceToYInArea(c.high(), cY, cH);
+            double lY = priceToYInArea(c.low(), cY, cH);
 
             Color col = c.isBullish() ? BULL : BEAR;
             gc.setStroke(col);
@@ -406,7 +406,7 @@ public class ChartPanel extends BorderPane {
         gc.beginPath();
         for (int i = 0; i < n; i++) {
             double x = startX + (i + 0.5) * totalW;
-            double y = priceToYInArea(candles.get(i).getClose(), cY, cH);
+            double y = priceToYInArea(candles.get(i).close(), cY, cH);
             if (i == 0)
                 gc.moveTo(x, y);
             else
@@ -556,7 +556,7 @@ public class ChartPanel extends BorderPane {
 
         for (int i = 0; i < n; i += step) {
             double x = startX + (i + 0.5) * totalW;
-            String label = fmt.format(Instant.ofEpochSecond(candles.get(i).getTimestamp()));
+            String label = fmt.format(Instant.ofEpochSecond(candles.get(i).timestamp()));
             gc.fillText(label, x - 15, cY + cH + 20);
         }
     }

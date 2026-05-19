@@ -89,12 +89,7 @@ public class MarketDataService {
                 .filter(i -> i.getType() == AssetType.CRYPTO)
                 .toList();
         scheduler.scheduleAtFixedRate(() -> {
-            cryptoList.forEach(inst -> {
-                try { binance.updatePrice(inst); }
-                catch (Exception e) {
-                    System.err.println("[Poll-Crypto] " + inst.getSymbol() + ": " + e.getMessage());
-                }
-            });
+            cryptoList.forEach(inst -> updatePriceSafely(inst, binance::updatePrice, "Poll-Crypto"));
             if (onUpdate != null) Platform.runLater(onUpdate);
         }, 0, 2, TimeUnit.SECONDS);
 
@@ -103,14 +98,22 @@ public class MarketDataService {
                 .filter(i -> i.getType() != AssetType.CRYPTO)
                 .toList();
         scheduler.scheduleAtFixedRate(() -> {
-            stocksCfdList.forEach(inst -> {
-                try { yahoo.updatePrice(inst); }
-                catch (Exception e) {
-                    System.err.println("[Poll-Stock] " + inst.getSymbol() + ": " + e.getMessage());
-                }
-            });
+            stocksCfdList.forEach(inst -> updatePriceSafely(inst, yahoo::updatePrice, "Poll-Stock"));
             if (onUpdate != null) Platform.runLater(onUpdate);
         }, 1, 5, TimeUnit.SECONDS);
+    }
+
+    private void updatePriceSafely(Instrument inst, PriceUpdater updater, String logPrefix) {
+        try {
+            updater.update(inst);
+        } catch (Exception e) {
+            System.err.println("[" + logPrefix + "] " + inst.getSymbol() + ": " + e.getMessage());
+        }
+    }
+
+    @FunctionalInterface
+    private interface PriceUpdater {
+        void update(Instrument inst) throws Exception;
     }
 
 

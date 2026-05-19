@@ -8,7 +8,6 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
-import javafx.scene.paint.Color;
 import java.time.format.DateTimeFormatter;
 
 public class PortfolioPanel extends VBox {
@@ -34,7 +33,6 @@ public class PortfolioPanel extends VBox {
 
     private final Label availableFundsLbl = new Label("$0.00");
     private final Label marginValueLbl = new Label("≈ $0.00");
-    private final Label spreadLbl = new Label("$0.00 / 0 PIPS");
     private final Label contractValueLbl = new Label("≈ $0.00");
     private final Label buyPriceLbl = new Label("0.00");
 
@@ -221,15 +219,6 @@ public class PortfolioPanel extends VBox {
             }
         });
 
-        // Spread
-        HBox spreadBox = new HBox(4);
-        spreadBox.setAlignment(Pos.CENTER);
-        spreadBox.setPadding(new Insets(5, 0, 5, 0));
-        Label sLbl = new Label("Spread:");
-        sLbl.setStyle("-fx-text-fill: #8b949e; -fx-font-size: 12px;");
-        spreadLbl.setStyle("-fx-text-fill: #e6edf3; -fx-font-size: 12px;");
-        spreadBox.getChildren().addAll(sLbl, spreadLbl);
-
         // Funds and Buy Button
         HBox fundsBox = new HBox(4);
         fundsBox.setAlignment(Pos.CENTER);
@@ -248,7 +237,7 @@ public class PortfolioPanel extends VBox {
         buyBtn.getChildren().addAll(buyTitle, buyPriceLbl);
         buyBtn.setOnMouseClicked(e -> placeOrder(true));
 
-        form.getChildren().addAll(volBox, slTpRow, updateSlTpBtn, spreadBox, fundsBox, buyBtn);
+        form.getChildren().addAll(volBox, slTpRow, updateSlTpBtn, fundsBox, buyBtn);
         this.getChildren().add(form);
     }
 
@@ -316,14 +305,12 @@ public class PortfolioPanel extends VBox {
             marginValueLbl.setText("≈ $0.00");
             buyPriceLbl.setText("0.00");
             contractValueLbl.setText("≈ $0.00");
-            spreadLbl.setText("$0.00 / 0 PIPS");
             chartPanel.hidePendingPreview();
             return;
         }
 
         double qty = parseDouble(qtyField.getText());
         double price = selectedInstrument.getPrice();
-        double bid = selectedInstrument.getBid();
         double ask = selectedInstrument.getAsk();
 
         buyPriceLbl.setText(formatPrice(ask));
@@ -331,12 +318,6 @@ public class PortfolioPanel extends VBox {
         double costUsd = qty * price;
         marginValueLbl.setText(String.format("≈ $%,.2f", costUsd));
         contractValueLbl.setText(String.format("≈ $%,.2f", costUsd));
-
-        double spread = ask - bid;
-        double spreadUsd = spread * qty;
-        int pips = (int) (spread / (price * 0.0001));
-        if (pips <= 0) pips = 2;
-        spreadLbl.setText(String.format("$%.2f / %d PIPS", spreadUsd, pips));
         
         if (qty > 0) {
             chartPanel.setPendingPreview(ask, true);
@@ -510,21 +491,21 @@ public class PortfolioPanel extends VBox {
                 return;
             }
 
-            symLabel.setText(pos.getInstrument().getSymbol());
+            symLabel.setText(pos.instrument().getSymbol());
             dirLabel.setText(pos.isLong() ? "▲ BUY" : "▼ SELL");
             dirLabel.setStyle("-fx-text-fill: #8b949e; -fx-font-size: 11px; -fx-font-weight: 700;");
 
-            double pnl = pos.getRealizedPnl();
+            double pnl = pos.realizedPnl();
             String sign = pnl >= 0 ? "+" : "";
             pnlLabel.setText(sign + "$" + String.format("%.2f", pnl));
             pnlLabel.getStyleClass().removeAll("pos-pnl-positive", "pos-pnl-negative");
             pnlLabel.getStyleClass().add(pnl >= 0 ? "pos-pnl-positive" : "pos-pnl-negative");
 
             infoLabel.setText(String.format(java.util.Locale.US, "%.4f | Open: %.2f | Close: %.2f",
-                    pos.getQuantity(), pos.getEntryPrice(), pos.getClosePrice()));
+                    pos.quantity(), pos.entryPrice(), pos.closePrice()));
                     
             DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd-MM-yy HH:mm");
-            dateLabel.setText(pos.getCloseDate().format(fmt));
+            dateLabel.setText(pos.closeDate().format(fmt));
 
             setGraphic(root);
             setPadding(new Insets(4, 8, 4, 8));

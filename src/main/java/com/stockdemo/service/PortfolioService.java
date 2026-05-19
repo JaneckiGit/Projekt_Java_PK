@@ -13,13 +13,12 @@ import java.time.LocalDateTime;
 import com.stockdemo.model.ClosedPosition;
 
 /**
- * Zarządza portfelem inwestycyjnym (balans, pozycje, margin).
+ * Zarządza portfelem inwestycyjnym (balans, pozycje, equity).
  */
 public class PortfolioService {
 
     private final DoubleProperty balance = new SimpleDoubleProperty(100_000.0);
     private final DoubleProperty equity = new SimpleDoubleProperty(100_000.0);
-    private final DoubleProperty freeMargin = new SimpleDoubleProperty(100_000.0);
 
     // Lista aktywnych pozycji
     public final ObservableList<Position> openPositions = FXCollections.observableArrayList();
@@ -31,9 +30,6 @@ public class PortfolioService {
 
     public double getEquity() { return equity.get(); }
     public DoubleProperty equityProperty() { return equity; }
-
-    public double getFreeMargin() { return freeMargin.get(); }
-    public DoubleProperty freeMarginProperty() { return freeMargin; }
 
     /**
      * Otwiera nową pozycję na rynku.
@@ -88,29 +84,24 @@ public class PortfolioService {
      * Uruchamiana np. co sekundę w pętli MarketData.
      */
     public void refreshPortfolio() {
-        double totalPnl = 0.0;
         double totalHoldingsValue = 0.0;
-
-        // Kopia listy, by bezpiecznie usuwać pozycje (zapobieganie ConcurrentModificationException)
         List<Position> toClose = new ArrayList<>();
 
         for (Position pos : openPositions) {
             pos.updatePnl();
-            totalPnl += pos.getPnl();
             totalHoldingsValue += pos.getQuantity() * pos.getInstrument().getBid();
 
             // Sprawdzanie Stop Loss / Take Profit
             double p = pos.getInstrument().getPrice();
-            if (pos.getStopLoss() > 0 && p <= pos.getStopLoss()) toClose.add(pos);
-            if (pos.getTakeProfit() > 0 && p >= pos.getTakeProfit()) toClose.add(pos);
+            if ((pos.getStopLoss() > 0 && p <= pos.getStopLoss()) || 
+                (pos.getTakeProfit() > 0 && p >= pos.getTakeProfit())) {
+                toClose.add(pos);
+            }
         }
 
         // Zamknij pozycje, które osiągnęły SL/TP
-        for (Position pos : toClose) {
-            closePosition(pos);
-        }
+        toClose.forEach(this::closePosition);
 
         equity.set(balance.get() + totalHoldingsValue);
-        freeMargin.set(balance.get()); // Free margin is just available cash
     }
 }

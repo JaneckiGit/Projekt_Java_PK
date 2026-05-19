@@ -24,7 +24,6 @@ public class MainLayout extends BorderPane {
         this.marketData = new MarketDataService();
         this.portfolio = new PortfolioService();
 
-        // Te trzy panele stworzymy w kolejnych commitach!
         this.chartPanel = new ChartPanel(marketData);
         this.portfolioPanel = new PortfolioPanel(portfolio, chartPanel);
         this.watchlistPanel = new WatchlistPanel(marketData);
