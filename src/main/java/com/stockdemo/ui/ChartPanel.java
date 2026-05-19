@@ -22,27 +22,27 @@ import java.util.Locale;
 
 public class ChartPanel extends BorderPane {
 
-    private static final Color BG         = Color.web("#0d1117");
-    private static final Color GRID       = Color.web("#21262d");
-    private static final Color AXIS_TEXT  = Color.web("#8b949e");
-    private static final Color BULL       = Color.web("#26a69a");
-    private static final Color BEAR       = Color.web("#ef5350");
+    private static final Color BG = Color.web("#0d1117");
+    private static final Color GRID = Color.web("#21262d");
+    private static final Color AXIS_TEXT = Color.web("#8b949e");
+    private static final Color BULL = Color.web("#26a69a");
+    private static final Color BEAR = Color.web("#ef5350");
     private static final Color LINE_COLOR = Color.web("#1f6feb");
-    private static final Color SL_COLOR   = Color.web("#f85149");
-    private static final Color TP_COLOR   = Color.web("#3fb950");
-    private static final Color CROSS      = Color.web("#30363d");
+    private static final Color SL_COLOR = Color.web("#f85149");
+    private static final Color TP_COLOR = Color.web("#3fb950");
+    private static final Color CROSS = Color.web("#30363d");
 
-    private static final int PAD_LEFT  = 12;
+    private static final int PAD_LEFT = 12;
     private static final int PAD_RIGHT = 60;
-    private static final int PAD_TOP   = 20;
-    private static final int PAD_BOT   = 36;
+    private static final int PAD_TOP = 20;
+    private static final int PAD_BOT = 36;
     private static final double DRAG_HIT = 8.0;
 
     private final MarketDataService marketData;
     private Instrument currentInstrument;
     private List<Candle> candles = new ArrayList<>();
     private String activeRange = "1M";
-    private boolean showCandles  = true;
+    private boolean showCandles = true;
 
     private double slPrice = 0;
     private double tpPrice = 0;
@@ -54,10 +54,10 @@ public class ChartPanel extends BorderPane {
     private double minPrice, maxPrice;
 
     private final Canvas canvas = new Canvas();
-    private final Label  symbolLabel = new Label("Select instrument");
-    private final Label  priceLabel  = new Label("");
-    private final Label  changeLabel = new Label("");
-    private final Label  loadingLbl  = new Label("Loading…");
+    private final Label symbolLabel = new Label("Select instrument");
+    private final Label priceLabel = new Label("");
+    private final Label changeLabel = new Label("");
+    private final Label loadingLbl = new Label("Loading…");
 
     public ChartPanel(MarketDataService marketData) {
         this.marketData = marketData;
@@ -68,10 +68,11 @@ public class ChartPanel extends BorderPane {
         changeLabel.getStyleClass().add("change-positive");
 
         HBox ranges = new HBox(4);
-        for (String r : new String[]{"1D", "1T", "1M", "3M", "1R", "5R"}) {
+        for (String r : new String[] { "1D", "1T", "1M", "3M", "1R", "5R" }) {
             Button btn = new Button(r);
             btn.getStyleClass().add("range-btn");
-            if (r.equals(activeRange)) btn.getStyleClass().add("range-btn-active");
+            if (r.equals(activeRange))
+                btn.getStyleClass().add("range-btn-active");
             btn.setOnAction(e -> {
                 ranges.getChildren().forEach(n -> n.getStyleClass().removeAll("range-btn-active"));
                 btn.getStyleClass().add("range-btn-active");
@@ -81,9 +82,9 @@ public class ChartPanel extends BorderPane {
             ranges.getChildren().add(btn);
         }
 
-        ToggleButton btnLine   = new ToggleButton("Line");
+        ToggleButton btnLine = new ToggleButton("Line");
         ToggleButton btnCandle = new ToggleButton("Candles");
-        ToggleGroup  tg        = new ToggleGroup();
+        ToggleGroup tg = new ToggleGroup();
         btnLine.setToggleGroup(tg);
         btnCandle.setToggleGroup(tg);
         btnCandle.setSelected(true);
@@ -95,15 +96,18 @@ public class ChartPanel extends BorderPane {
             showCandles = selected;
             btnCandle.getStyleClass().removeAll("chart-type-btn-active");
             btnLine.getStyleClass().removeAll("chart-type-btn-active");
-            if (selected) btnCandle.getStyleClass().add("chart-type-btn-active");
-            else          btnLine.getStyleClass().add("chart-type-btn-active");
+            if (selected)
+                btnCandle.getStyleClass().add("chart-type-btn-active");
+            else
+                btnLine.getStyleClass().add("chart-type-btn-active");
             redraw();
         });
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
-        HBox toolbar = new HBox(12, symbolLabel, priceLabel, changeLabel, spacer, ranges, new Separator(), new HBox(4, btnLine, btnCandle));
+        HBox toolbar = new HBox(12, symbolLabel, priceLabel, changeLabel, spacer, ranges, new Separator(),
+                new HBox(4, btnLine, btnCandle));
         toolbar.setId("chartToolbar");
         toolbar.setAlignment(Pos.CENTER_LEFT);
 
@@ -113,24 +117,46 @@ public class ChartPanel extends BorderPane {
 
         canvas.widthProperty().bind(canvasPane.widthProperty());
         canvas.heightProperty().bind(canvasPane.heightProperty());
-        canvas.widthProperty().addListener(e  -> redraw());
+        canvas.widthProperty().addListener(e -> redraw());
         canvas.heightProperty().addListener(e -> redraw());
 
-        canvas.setOnMouseMoved(e -> { crossX = e.getX(); crossY = e.getY(); redraw(); });
-        canvas.setOnMouseExited(e -> { crossX = -1; crossY = -1; redraw(); });
+        canvas.setOnMouseMoved(e -> {
+            crossX = e.getX();
+            crossY = e.getY();
+            redraw();
+        });
+        canvas.setOnMouseExited(e -> {
+            crossX = -1;
+            crossY = -1;
+            redraw();
+        });
         canvas.setOnMousePressed(e -> {
             double slY = priceToY(slPrice);
             double tpY = priceToY(tpPrice);
-            if (slPrice > 0 && Math.abs(e.getY() - slY) < DRAG_HIT) draggingSL = true;
-            else if (tpPrice > 0 && Math.abs(e.getY() - tpY) < DRAG_HIT) draggingTP = true;
+            if (slPrice > 0 && Math.abs(e.getY() - slY) < DRAG_HIT)
+                draggingSL = true;
+            else if (tpPrice > 0 && Math.abs(e.getY() - tpY) < DRAG_HIT)
+                draggingTP = true;
         });
         canvas.setOnMouseDragged(e -> {
-            crossX = e.getX(); crossY = e.getY();
-            if (draggingSL) { slPrice = yToPrice(e.getY()); if (onSlTpChanged != null) onSlTpChanged.run(); }
-            if (draggingTP) { tpPrice = yToPrice(e.getY()); if (onSlTpChanged != null) onSlTpChanged.run(); }
+            crossX = e.getX();
+            crossY = e.getY();
+            if (draggingSL) {
+                slPrice = yToPrice(e.getY());
+                if (onSlTpChanged != null)
+                    onSlTpChanged.run();
+            }
+            if (draggingTP) {
+                tpPrice = yToPrice(e.getY());
+                if (onSlTpChanged != null)
+                    onSlTpChanged.run();
+            }
             redraw();
         });
-        canvas.setOnMouseReleased(e -> { draggingSL = false; draggingTP = false; });
+        canvas.setOnMouseReleased(e -> {
+            draggingSL = false;
+            draggingTP = false;
+        });
 
         this.setTop(toolbar);
         this.setCenter(canvasPane);
@@ -139,29 +165,55 @@ public class ChartPanel extends BorderPane {
     public void loadInstrument(Instrument instrument) {
         this.currentInstrument = instrument;
         symbolLabel.setText(instrument.getSymbol());
-        slPrice = 0; tpPrice = 0;
+        slPrice = 0;
+        tpPrice = 0;
         loadChart();
     }
 
-    public void setSlPrice(double price) { this.slPrice = price; redraw(); }
-    public void setTpPrice(double price) { this.tpPrice = price; redraw(); }
-    public double getSlPrice()           { return slPrice; }
-    public double getTpPrice()           { return tpPrice; }
-    public void setOnSlTpChanged(Runnable r) { this.onSlTpChanged = r; }
+    public void setSlPrice(double price) {
+        this.slPrice = price;
+        redraw();
+    }
+
+    public void setTpPrice(double price) {
+        this.tpPrice = price;
+        redraw();
+    }
+
+    public double getSlPrice() {
+        return slPrice;
+    }
+
+    public double getTpPrice() {
+        return tpPrice;
+    }
+
+    public void setOnSlTpChanged(Runnable r) {
+        this.onSlTpChanged = r;
+    }
 
     public void showPositionLines(Position pos) {
-        if (pos == null) { slPrice = 0; tpPrice = 0; }
-        else {
+        if (pos == null) {
+            slPrice = 0;
+            tpPrice = 0;
+        } else {
             slPrice = pos.getStopLoss();
             tpPrice = pos.getTakeProfit();
-            pos.stopLossProperty().addListener((o, old, v) -> { slPrice = v.doubleValue(); redraw(); });
-            pos.takeProfitProperty().addListener((o, old, v) -> { tpPrice = v.doubleValue(); redraw(); });
+            pos.stopLossProperty().addListener((o, old, v) -> {
+                slPrice = v.doubleValue();
+                redraw();
+            });
+            pos.takeProfitProperty().addListener((o, old, v) -> {
+                tpPrice = v.doubleValue();
+                redraw();
+            });
         }
         redraw();
     }
 
     public void refreshPrice(Instrument inst) {
-        if (inst == null) return;
+        if (inst == null)
+            return;
         double p = inst.getPrice();
         double ch = inst.getChangePercent();
         priceLabel.setText(formatPrice(p));
@@ -172,7 +224,8 @@ public class ChartPanel extends BorderPane {
     }
 
     private void loadChart() {
-        if (currentInstrument == null) return;
+        if (currentInstrument == null)
+            return;
         loadingLbl.setVisible(true);
         marketData.loadCandles(currentInstrument, activeRange, data -> {
             this.candles = data;
@@ -183,7 +236,8 @@ public class ChartPanel extends BorderPane {
     }
 
     private void redraw() {
-        if (canvas.getWidth() <= 0 || canvas.getHeight() <= 0) return;
+        if (canvas.getWidth() <= 0 || canvas.getHeight() <= 0)
+            return;
         GraphicsContext gc = canvas.getGraphicsContext2D();
         double W = canvas.getWidth();
         double H = canvas.getHeight();
@@ -201,7 +255,8 @@ public class ChartPanel extends BorderPane {
         minPrice = candles.stream().mapToDouble(Candle::getLow).min().orElse(0);
         maxPrice = candles.stream().mapToDouble(Candle::getHigh).max().orElse(1);
         double priceSpan = maxPrice - minPrice;
-        if (priceSpan == 0) priceSpan = 1;
+        if (priceSpan == 0)
+            priceSpan = 1;
         minPrice -= priceSpan * 0.05;
         maxPrice += priceSpan * 0.05;
         priceSpan = maxPrice - minPrice;
@@ -212,8 +267,10 @@ public class ChartPanel extends BorderPane {
         double cH = H - PAD_TOP - PAD_BOT;
 
         drawGrid(gc, cX, cY, cW, cH, priceSpan);
-        if (showCandles) drawCandles(gc, cX, cY, cW, cH);
-        else             drawLine(gc, cX, cY, cW, cH);
+        if (showCandles)
+            drawCandles(gc, cX, cY, cW, cH);
+        else
+            drawLine(gc, cX, cY, cW, cH);
 
         drawSlTpLines(gc, cX, cY, cW, cH, W);
         drawCrosshair(gc, cX, cY, cW, cH, W, H, priceSpan);
@@ -237,16 +294,16 @@ public class ChartPanel extends BorderPane {
         int n = candles.size();
         double effectiveN = Math.max(n, 50.0);
         double totalW = cW / effectiveN;
-        double bodyW  = Math.max(1, totalW * 0.6);
+        double bodyW = Math.max(1, totalW * 0.6);
         double startX = cX + cW - (n * totalW);
 
         for (int i = 0; i < n; i++) {
-            Candle c  = candles.get(i);
+            Candle c = candles.get(i);
             double cx = startX + (i + 0.5) * totalW;
-            double oY = priceToYInArea(c.getOpen(),  cY, cH);
-            double cY2= priceToYInArea(c.getClose(), cY, cH);
-            double hY = priceToYInArea(c.getHigh(),  cY, cH);
-            double lY = priceToYInArea(c.getLow(),   cY, cH);
+            double oY = priceToYInArea(c.getOpen(), cY, cH);
+            double cY2 = priceToYInArea(c.getClose(), cY, cH);
+            double hY = priceToYInArea(c.getHigh(), cY, cH);
+            double lY = priceToYInArea(c.getLow(), cY, cH);
 
             Color col = c.isBullish() ? BULL : BEAR;
             gc.setStroke(col);
@@ -254,7 +311,7 @@ public class ChartPanel extends BorderPane {
             gc.setLineWidth(1.0);
             gc.strokeLine(cx, hY, cx, lY);
 
-            double top    = Math.min(oY, cY2);
+            double top = Math.min(oY, cY2);
             double height = Math.max(1, Math.abs(oY - cY2));
             gc.fillRect(cx - bodyW / 2, top, bodyW, height);
         }
@@ -262,7 +319,8 @@ public class ChartPanel extends BorderPane {
 
     private void drawLine(GraphicsContext gc, double cX, double cY, double cW, double cH) {
         int n = candles.size();
-        if (n < 2) return;
+        if (n < 2)
+            return;
         double effectiveN = Math.max(n, 50.0);
         double totalW = cW / effectiveN;
         double startX = cX + cW - (n * totalW);
@@ -273,8 +331,10 @@ public class ChartPanel extends BorderPane {
         for (int i = 0; i < n; i++) {
             double x = startX + (i + 0.5) * totalW;
             double y = priceToYInArea(candles.get(i).getClose(), cY, cH);
-            if (i == 0) gc.moveTo(x, y);
-            else        gc.lineTo(x, y);
+            if (i == 0)
+                gc.moveTo(x, y);
+            else
+                gc.lineTo(x, y);
         }
         gc.stroke();
     }
@@ -304,8 +364,10 @@ public class ChartPanel extends BorderPane {
         }
     }
 
-    private void drawCrosshair(GraphicsContext gc, double cX, double cY, double cW, double cH, double W, double H, double priceSpan) {
-        if (crossX < cX || crossX > cX + cW || crossY < cY || crossY > cY + cH) return;
+    private void drawCrosshair(GraphicsContext gc, double cX, double cY, double cW, double cH, double W, double H,
+            double priceSpan) {
+        if (crossX < cX || crossX > cX + cW || crossY < cY || crossY > cY + cH)
+            return;
         gc.setStroke(CROSS);
         gc.setLineWidth(0.7);
         gc.setLineDashes(3, 3);
@@ -321,7 +383,8 @@ public class ChartPanel extends BorderPane {
         gc.fillText(formatPrice(price), cX + cW + 6, crossY + 5);
     }
 
-    private void drawAxisLabels(GraphicsContext gc, double cX, double cY, double cW, double cH, double W, double priceSpan) {
+    private void drawAxisLabels(GraphicsContext gc, double cX, double cY, double cW, double cH, double W,
+            double priceSpan) {
         gc.setFill(AXIS_TEXT);
         gc.setFont(Font.font("Inter", 10));
 
@@ -331,7 +394,8 @@ public class ChartPanel extends BorderPane {
             gc.fillText(formatPrice(p), cX + cW + 4, y + 4);
         }
 
-        if (candles.isEmpty()) return;
+        if (candles.isEmpty())
+            return;
         int n = candles.size();
         int step = Math.max(1, n / 6);
         DateTimeFormatter fmt = DateTimeFormatter.ofPattern("MM/dd").withZone(ZoneId.systemDefault());
@@ -350,10 +414,12 @@ public class ChartPanel extends BorderPane {
         double ratio = (maxPrice - price) / (maxPrice - minPrice);
         return areaY + ratio * areaH;
     }
+
     private double priceToY(double price) {
         double cH = canvas.getHeight() - PAD_TOP - PAD_BOT;
         return priceToYInArea(price, PAD_TOP, cH);
     }
+
     private double yToPrice(double y) {
         double cH = canvas.getHeight() - PAD_TOP - PAD_BOT;
         double ratio = (y - PAD_TOP) / cH;
@@ -362,8 +428,10 @@ public class ChartPanel extends BorderPane {
 
     private String formatPrice(double p) {
         try {
-            if (p < 1)   return String.format(Locale.US, "%.5f", p);
-            if (p < 100) return String.format(Locale.US, "%.4f", p);
+            if (p < 1)
+                return String.format(Locale.US, "%.5f", p);
+            if (p < 100)
+                return String.format(Locale.US, "%.4f", p);
             return String.format(Locale.US, "%.2f", p);
         } catch (Exception e) {
             return String.valueOf(p);

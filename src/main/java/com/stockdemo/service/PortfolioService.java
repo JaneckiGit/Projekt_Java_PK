@@ -35,12 +35,17 @@ public class PortfolioService {
      * Otwiera nową pozycję na rynku.
      */
     public void openPosition(Instrument instrument, boolean isLong, double quantity, double sl, double tp) {
-        double currentPrice = isLong ? instrument.getAsk() : instrument.getBid();
+        if (!isLong) return; // Spot market only allows buying
 
-        // Zabezpieczenie przed błędem z brakiem danych API
+        double currentPrice = instrument.getAsk();
         if (currentPrice <= 0) return;
 
-        Position pos = new Position(instrument, isLong, quantity, currentPrice, sl, tp);
+        double cost = quantity * currentPrice;
+        if (balance.get() < cost) return; // Insufficient funds
+
+        balance.set(balance.get() - cost); // Deduct Cash
+
+        Position pos = new Position(instrument, true, quantity, currentPrice, sl, tp);
         openPositions.add(pos);
         refreshPortfolio();
     }
@@ -50,8 +55,11 @@ public class PortfolioService {
      */
     public void closePosition(Position pos) {
         if (!openPositions.contains(pos)) return;
-        pos.updatePnl();
-        balance.set(balance.get() + pos.getPnl());
+        
+        // Add current value of holdings to cash balance
+        double currentValue = pos.getQuantity() * pos.getInstrument().getBid();
+        balance.set(balance.get() + currentValue);
+        
         openPositions.remove(pos);
         refreshPortfolio();
     }
@@ -62,7 +70,7 @@ public class PortfolioService {
      */
     public void refreshPortfolio() {
         double totalPnl = 0.0;
-        double totalMargin = 0.0;
+        double totalHoldingsValue = 0.0;
 
         // Kopia listy, by bezpiecznie usuwać pozycje (zapobieganie ConcurrentModificationException)
         List<Position> toClose = new ArrayList<>();
@@ -70,19 +78,12 @@ public class PortfolioService {
         for (Position pos : openPositions) {
             pos.updatePnl();
             totalPnl += pos.getPnl();
-
-            // Zakładamy stały margin rzędu 10% (dźwignia 1:10)
-            totalMargin += pos.getQuantity() * pos.getInstrument().getPrice() * 0.1;
+            totalHoldingsValue += pos.getQuantity() * pos.getInstrument().getBid();
 
             // Sprawdzanie Stop Loss / Take Profit
             double p = pos.getInstrument().getPrice();
-            if (pos.isLong()) {
-                if (pos.getStopLoss() > 0 && p <= pos.getStopLoss()) toClose.add(pos);
-                if (pos.getTakeProfit() > 0 && p >= pos.getTakeProfit()) toClose.add(pos);
-            } else {
-                if (pos.getStopLoss() > 0 && p >= pos.getStopLoss()) toClose.add(pos);
-                if (pos.getTakeProfit() > 0 && p <= pos.getTakeProfit()) toClose.add(pos);
-            }
+            if (pos.getStopLoss() > 0 && p <= pos.getStopLoss()) toClose.add(pos);
+            if (pos.getTakeProfit() > 0 && p >= pos.getTakeProfit()) toClose.add(pos);
         }
 
         // Zamknij pozycje, które osiągnęły SL/TP
@@ -90,7 +91,7 @@ public class PortfolioService {
             closePosition(pos);
         }
 
-        equity.set(balance.get() + totalPnl);
-        freeMargin.set(equity.get() - totalMargin);
+        equity.set(balance.get() + totalHoldingsValue);
+        freeMargin.set(balance.get()); // Free margin is just available cash
     }
 }

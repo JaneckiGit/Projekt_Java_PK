@@ -15,17 +15,17 @@ import javafx.scene.layout.*;
 public class MainLayout extends BorderPane {
 
     private final MarketDataService marketData;
-    private final PortfolioService  portfolio;
-    private final ChartPanel        chartPanel;
-    private final PortfolioPanel    portfolioPanel;
-    private final WatchlistPanel    watchlistPanel;
+    private final PortfolioService portfolio;
+    private final ChartPanel chartPanel;
+    private final PortfolioPanel portfolioPanel;
+    private final WatchlistPanel watchlistPanel;
 
     public MainLayout() {
-        this.marketData     = new MarketDataService();
-        this.portfolio      = new PortfolioService();
+        this.marketData = new MarketDataService();
+        this.portfolio = new PortfolioService();
 
         // Te trzy panele stworzymy w kolejnych commitach!
-        this.chartPanel     = new ChartPanel(marketData);
+        this.chartPanel = new ChartPanel(marketData);
         this.portfolioPanel = new PortfolioPanel(portfolio, chartPanel);
         this.watchlistPanel = new WatchlistPanel(marketData);
 
@@ -43,7 +43,8 @@ public class MainLayout extends BorderPane {
             portfolioPanel.refresh();
 
             Instrument sel = watchlistPanel.listView().getSelectionModel().getSelectedItem();
-            if (sel != null) chartPanel.refreshPrice(sel);
+            if (sel != null)
+                chartPanel.refreshPrice(sel);
         });
 
         StackPane centerStack = new StackPane(chartPanel);

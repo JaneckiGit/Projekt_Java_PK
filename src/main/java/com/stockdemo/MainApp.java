@@ -19,8 +19,7 @@ public class MainApp {
 
             Scene scene = new Scene(root, 1400, 820);
             scene.getStylesheets().add(
-                    getClass().getResource("/styles.css").toExternalForm()
-            );
+                    getClass().getResource("/styles.css").toExternalForm());
 
             stage.setTitle("Stock Demo — Trading Platform");
             stage.setScene(scene);
