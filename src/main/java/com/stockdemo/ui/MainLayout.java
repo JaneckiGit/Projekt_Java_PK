@@ -6,9 +6,8 @@ import com.stockdemo.service.PortfolioService;
 import javafx.geometry.Pos;
 import javafx.scene.layout.*;
 
-/**
- * Główny layout: po lewej Watchlist, na środku Wykres, po prawej Portfolio.
- */
+//Główny layout: po lewej Watchlist, na środku Wykres, po prawej Portfolio.
+
 public class MainLayout extends BorderPane {
 
     private final MarketDataService marketData;
@@ -25,14 +24,14 @@ public class MainLayout extends BorderPane {
         this.portfolioPanel = new PortfolioPanel(portfolio, chartPanel);
         this.watchlistPanel = new WatchlistPanel(marketData);
 
-        // Połącz kliknięcie na liście z odświeżaniem wykresu
+        //Połącz kliknięcie na liście z odświeżaniem wykresu
         watchlistPanel.setOnInstrumentSelected(inst -> {
             chartPanel.loadInstrument(inst);
             portfolioPanel.setInstrument(inst);
         });
 
-        // W pętli co każdy "tik" (np. co 2 sekundy):
-        // 1. Odśwież listę, 2. Sprawdź StopLoss, 3. Przelicz PnL
+        //W pętli co każdy "tik" (np. co 2 sekundy):
+        //1. Odśwież listę, 2. Sprawdź StopLoss, 3. Przelicz PnL
         marketData.startPolling(() -> {
             watchlistPanel.refreshList();
             portfolio.refreshPortfolio();

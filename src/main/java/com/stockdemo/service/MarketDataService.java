@@ -15,10 +15,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
-/**
- * Central service for fetching & refreshing market data.
- * Polls prices every 30 seconds on a background thread.
- */
+//odpowiedzialne za refresh marketu i cen w tle
 public class MarketDataService {
 
     private final YahooFinanceApi yahoo = new YahooFinanceApi();
@@ -32,7 +29,7 @@ public class MarketDataService {
 
     // Master list of all instruments
     public final ObservableList<Instrument> instruments = FXCollections.observableArrayList(
-            // ── STOCKS (US) ─────────────────────────────────────────────
+            //STOCKS (US)
             new Instrument("AAPL",  "Apple Inc.",          AssetType.STOCK,  "AAPL"),
             new Instrument("MSFT",  "Microsoft",           AssetType.STOCK,  "MSFT"),
             new Instrument("TSLA",  "Tesla",               AssetType.STOCK,  "TSLA"),
@@ -43,17 +40,17 @@ public class MarketDataService {
             new Instrument("AMD",   "Advanced Micro Dev.", AssetType.STOCK,  "AMD"),
             new Instrument("INTC",  "Intel",               AssetType.STOCK,  "INTC"),
             new Instrument("NFLX",  "Netflix",             AssetType.STOCK,  "NFLX"),
-            // ── STOCKS (WIG20 - Poland) ─────────────────────────────────
+            //STOCKS (WIG20 - Poland)
             new Instrument("CDR",   "CD Projekt",          AssetType.STOCK,  "CDR.WA"),
             new Instrument("PKN",   "Orlen",               AssetType.STOCK,  "PKN.WA"),
             new Instrument("PKO",   "PKO BP",              AssetType.STOCK,  "PKO.WA"),
             new Instrument("DNP",   "Dino Polska",         AssetType.STOCK,  "DNP.WA"),
             new Instrument("KGH",   "KGHM",                AssetType.STOCK,  "KGH.WA"),
-            // ── INDICES ─────────────────────────────────────────────────
+            //INDICES
             new Instrument("SPX",   "S&P 500",             AssetType.STOCK,  "^GSPC"),
             new Instrument("NDX",   "NASDAQ 100",          AssetType.STOCK,  "^NDX"),
             new Instrument("DJI",   "Dow Jones",           AssetType.STOCK,  "^DJI"),
-            // ── CFD (Commodities & Forex) ───────────────────────────────
+            //CFD (Commodities & Forex)
             new Instrument("GOLD",  "Gold CFD",            AssetType.CFD,    "GC=F"),
             new Instrument("SILV",  "Silver CFD",          AssetType.CFD,    "SI=F"),
             new Instrument("OIL",   "Crude Oil CFD",       AssetType.CFD,    "CL=F"),
@@ -64,7 +61,7 @@ public class MarketDataService {
             new Instrument("USDJPY","USD/JPY CFD",         AssetType.CFD,    "USDJPY=X"),
             new Instrument("EURPLN","EUR/PLN CFD",         AssetType.CFD,    "EURPLN=X"),
             new Instrument("USDPLN","USD/PLN CFD",         AssetType.CFD,    "USDPLN=X"),
-            // ── CRYPTO (Binance) ────────────────────────────────────────
+            //CRYPTO (Binance)
             new Instrument("BTC",   "Bitcoin",             AssetType.CRYPTO, "BTCUSDT"),
             new Instrument("ETH",   "Ethereum",            AssetType.CRYPTO, "ETHUSDT"),
             new Instrument("BNB",   "BNB",                 AssetType.CRYPTO, "BNBUSDT"),
@@ -84,7 +81,7 @@ public class MarketDataService {
      * onUpdate is called on FX thread after EACH refresh cycle.
      */
     public void startPolling(Runnable onUpdate) {
-        // Fast crypto timer (every 2 seconds)
+        //Fast crypto timer (every 2 seconds)
         List<Instrument> cryptoList = instruments.stream()
                 .filter(i -> i.getType() == AssetType.CRYPTO)
                 .toList();
@@ -93,7 +90,7 @@ public class MarketDataService {
             if (onUpdate != null) Platform.runLater(onUpdate);
         }, 0, 2, TimeUnit.SECONDS);
 
-        // Stocks/CFD timer (every 5 seconds)
+        //Stocks/CFD timer (every 5 seconds)
         List<Instrument> stocksCfdList = instruments.stream()
                 .filter(i -> i.getType() != AssetType.CRYPTO)
                 .toList();

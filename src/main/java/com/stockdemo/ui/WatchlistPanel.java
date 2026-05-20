@@ -23,7 +23,7 @@ public class WatchlistPanel extends VBox {
 
     private Consumer<Instrument> onSelect;
 
-    // ── Detail panel labels ───────────────────────────────────────────────
+    //Detail panel labels
     private final Label detailName = new Label("—");
     private final Label detailBid = new Label("—");
     private final Label detailAsk = new Label("—");
@@ -55,7 +55,7 @@ public class WatchlistPanel extends VBox {
         btnStock.setSelected(true);
         applyFilter(AssetType.STOCK);
 
-        // ── ListView ──────────────────────────────────────────────────────
+        //ListView
         listView = new ListView<>(filtered);
         listView.getStyleClass().add("instrument-list");
         listView.setCellFactory(lv -> new InstrumentCell());
@@ -70,7 +70,7 @@ public class WatchlistPanel extends VBox {
         });
         VBox.setVgrow(listView, Priority.ALWAYS);
 
-        // ── Detail panel ──────────────────────────────────────────────────
+        //Detail panel
         VBox detailPanel = buildDetailPanel();
 
         this.getChildren().addAll(title, filters, listView, detailPanel);
@@ -92,13 +92,13 @@ public class WatchlistPanel extends VBox {
             updateDetailPanel(currentDetail);
     }
 
-    // ── Detail panel builder ──────────────────────────────────────────────
+    //Detail panel builder
 
     private VBox buildDetailPanel() {
         Label secTitle = new Label("INSTRUMENT DETAILS");
         secTitle.getStyleClass().add("section-title");
 
-        // Style all detail labels
+        //Style all detail labels
         for (Label lbl : new Label[] { detailBid, detailAsk, detailHigh, detailLow,
                 detailOpen, detailPrev, detailVol, detailChg }) {
             lbl.setStyle("-fx-text-fill: #e6edf3; -fx-font-size: 12px; -fx-font-weight: 600;");
@@ -146,7 +146,7 @@ public class WatchlistPanel extends VBox {
         detailOpen.setText(formatPrice(inst.getOpen()));
         detailPrev.setText(formatPrice(inst.getPrevClose()));
 
-        // Volume formatting
+        //Volume formatting
         double vol = inst.getVolume();
         if (vol >= 1_000_000)
             detailVol.setText(String.format("%.2fM", vol / 1_000_000));
@@ -162,7 +162,7 @@ public class WatchlistPanel extends VBox {
                 "; -fx-font-size: 12px; -fx-font-weight: 600;");
     }
 
-    // ── Private helpers ───────────────────────────────────────────────────
+    //Private helpers
 
     private ToggleButton filterBtn(String text, AssetType type, ToggleGroup tg) {
         ToggleButton btn = new ToggleButton(text);
@@ -183,7 +183,7 @@ public class WatchlistPanel extends VBox {
         filtered.setAll(marketData.instruments.filtered(i -> i.getType() == type));
     }
 
-    // ── Cell renderer ─────────────────────────────────────────────────────
+    //Cell renderer
 
     private static class InstrumentCell extends ListCell<Instrument> {
         private final HBox root = new HBox(8);

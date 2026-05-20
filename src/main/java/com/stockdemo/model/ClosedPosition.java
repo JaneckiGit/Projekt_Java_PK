@@ -2,9 +2,7 @@ package com.stockdemo.model;
 
 import java.time.LocalDateTime;
 
-/**
-2:  * Reprezentuje zamkniętą pozycję w historii transakcji.
-3:  */
+//Reprezentuje zamkniętą pozycję w historii transakcji.
 public record ClosedPosition(
     Instrument instrument,
     boolean isLong,

@@ -17,17 +17,17 @@ public class PortfolioPanel extends VBox {
 
     private Instrument selectedInstrument;
 
-    // Etykiety z saldem konta
+    //Etykiety z saldem konta
     private final Label balanceLabel = new Label("$100,000.00");
     private final Label equityLabel = new Label("Equity: $100,000.00");
     private final Label pnlLabel = new Label("P&L: $0.00");
 
-    // Pola tekstowe w formularzu
+    //Pola tekstowe w formularzu
     private final TextField qtyField = new TextField("1");
     private final TextField slField = new TextField();
     private final TextField tpField = new TextField();
 
-    // Listy
+    //Listy
     private final ListView<Position> positionsList = new ListView<>();
     private final ListView<ClosedPosition> historyList = new ListView<>();
 
@@ -46,7 +46,7 @@ public class PortfolioPanel extends VBox {
         buildUnifiedTradeForm();
         buildPositionsAndHistorySection();
         
-        // Przekaż listę otwartych pozycji do ChartPanel
+        //Przekaż listę otwartych pozycji do ChartPanel
         chartPanel.setOpenPositions(portfolio.openPositions);
 
         chartPanel.setOnPendingSlTpChanged(() -> {
@@ -54,7 +54,7 @@ public class PortfolioPanel extends VBox {
             tpField.setText(formatPrice(chartPanel.getPendingTpPrice()));
         });
 
-        // Odświeżaj listę pozycji automatycznie
+        //Odświeżaj listę pozycji automatycznie
         portfolio.openPositions.addListener((javafx.collections.ListChangeListener<Position>) c -> refresh());
         portfolio.closedPositions.addListener((javafx.collections.ListChangeListener<ClosedPosition>) c -> refresh());
         refresh();
@@ -68,7 +68,7 @@ public class PortfolioPanel extends VBox {
         chartPanel.setPendingSlPrice(0.0);
         chartPanel.setPendingTpPrice(0.0);
 
-        // Resetuje wolumen
+        //Resetuje wolumen
         qtyField.setText("0.01");
         updateOrderValue();
     }
@@ -77,7 +77,7 @@ public class PortfolioPanel extends VBox {
         balanceLabel.setText("$" + String.format("%,.2f", portfolio.getBalance()));
         equityLabel.setText("Equity: $" + String.format("%,.2f", portfolio.getEquity()));
 
-        // Obliczanie zysków w otwartych pozycjach
+        //Obliczanie zysków w otwartych pozycjach
         double pnl = portfolio.openPositions.stream().mapToDouble(Position::getPnl).sum();
         String sign = pnl >= 0 ? "+" : "";
         pnlLabel.setText("P&L: " + sign + "$" + String.format("%,.2f", pnl));
@@ -87,7 +87,7 @@ public class PortfolioPanel extends VBox {
         positionsList.refresh();
         historyList.refresh();
         
-        updateOrderValue(); // to refresh pending preview on chart
+        updateOrderValue(); //to refresh pending preview on chart
     }
 
     private void buildAccountSection() {
@@ -352,7 +352,7 @@ public class PortfolioPanel extends VBox {
 
         portfolio.openPosition(selectedInstrument, isLong, qty, sl, tp);
         
-        // Reset formularza
+        //Reset formularza
         slField.setText("");
         tpField.setText("");
         chartPanel.setPendingSlPrice(0);
@@ -383,7 +383,7 @@ public class PortfolioPanel extends VBox {
         alert.showAndWait();
     }
 
-    // ── Komórka listy aktywnych pozycji ─────────────────────────────────────────────
+    //Komórka listy aktywnych pozycji
 
     private class PositionCell extends ListCell<Position> {
         private final VBox root = new VBox(4);
@@ -451,7 +451,7 @@ public class PortfolioPanel extends VBox {
         }
     }
     
-    // ── Komórka listy zamkniętych pozycji (Historia) ─────────────────────────────────────────────
+    //Komórka listy zamkniętych pozycji (Historia)
 
     private class ClosedPositionCell extends ListCell<ClosedPosition> {
         private final VBox root = new VBox(4);

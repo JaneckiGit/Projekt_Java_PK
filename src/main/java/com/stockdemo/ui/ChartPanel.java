@@ -55,17 +55,17 @@ public class ChartPanel extends BorderPane {
     private ChartState state = ChartState.IDLE;
     private Consumer<Double> onPriceSelected;
 
-    // Pending order preview
+    //Pending order preview
     private double pendingSlPrice = 0;
     private double pendingTpPrice = 0;
     private double pendingEntryPrice = 0; 
     private boolean showPendingPreview = false;
     private Runnable onPendingSlTpChanged;
 
-    // Open positions for current instrument
+    //Open positions current instrument
     private List<Position> openPositions = new ArrayList<>();
     
-    // Dragging state
+    //Dragging state
     private boolean draggingPendingSL = false;
     private boolean draggingPendingTP = false;
     private Position draggedPosSL = null;
@@ -84,7 +84,7 @@ public class ChartPanel extends BorderPane {
         this.marketData = marketData;
         this.setId("chartPanel");
         
-        // Ensure panel can receive key events for ESC
+        //upewnienie sie ze panem moze otrzymac event na exc
         this.setFocusTraversable(true);
         this.setOnKeyPressed(e -> {
             if (e.getCode() == KeyCode.ESCAPE && state != ChartState.IDLE) {
@@ -171,10 +171,10 @@ public class ChartPanel extends BorderPane {
                 return;
             }
 
-            // Check dragging hits
+            //Check hits
             double my = e.getY();
             
-            // Check open positions first
+            //sprawdz otwarte pozycje
             for (Position p : openPositions) {
                 if (p.getInstrument().equals(currentInstrument)) {
                     if (p.getStopLoss() > 0 && Math.abs(my - priceToY(p.getStopLoss())) < DRAG_HIT) {
@@ -188,7 +188,7 @@ public class ChartPanel extends BorderPane {
                 }
             }
             
-            // Check pending order lines
+            //sprawdz pozycje pending
             if (pendingSlPrice > 0 && Math.abs(my - priceToY(pendingSlPrice)) < DRAG_HIT) {
                 draggingPendingSL = true;
                 return;
@@ -291,9 +291,9 @@ public class ChartPanel extends BorderPane {
         changeLabel.getStyleClass().removeAll("change-positive", "change-negative");
         changeLabel.getStyleClass().add(ch >= 0 ? "change-positive" : "change-negative");
         
-        // Update pending preview if following market
+        //zaktualizuj preview rynku
         if (showPendingPreview && currentInstrument != null) {
-            redraw(); // Simple redraw will fetch latest ask/bid if needed
+            redraw(); //Simple redraw will fetch latest ask/bid if needed
         }
     }
 
@@ -447,7 +447,7 @@ public class ChartPanel extends BorderPane {
                 }
             }
             
-            // Draw TP Line
+            //Draw TP Line
             if (p.getTakeProfit() > 0) {
                 double tpY = priceToYInArea(p.getTakeProfit(), cY, cH);
                 if (tpY >= cY && tpY <= cY + cH) {

@@ -3,9 +3,8 @@ package com.stockdemo.model;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 
-/**
- * Reprezentuje otwartą pozycję w portfelu.
- */
+//Reprezentuje otwartą pozycję w portfelu.
+
 public class Position {
 
     private final Instrument instrument;

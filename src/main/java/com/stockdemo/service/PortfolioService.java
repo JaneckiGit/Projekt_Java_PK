@@ -12,9 +12,8 @@ import java.util.List;
 import java.time.LocalDateTime;
 import com.stockdemo.model.ClosedPosition;
 
-/**
- * Zarządza portfelem inwestycyjnym (balans, pozycje, equity).
- */
+//Zarządza portfelem inwestycyjnym (balans, pozycje, equity).
+
 public class PortfolioService {
 
     private final DoubleProperty balance = new SimpleDoubleProperty(100_000.0);
@@ -31,9 +30,8 @@ public class PortfolioService {
     public double getEquity() { return equity.get(); }
     public DoubleProperty equityProperty() { return equity; }
 
-    /**
-     * Otwiera nową pozycję na rynku.
-     */
+    //Otwiera nową pozycję na rynku.
+
     public void openPosition(Instrument instrument, boolean isLong, double quantity, double sl, double tp) {
         if (!isLong) return; // Spot market only allows buying
 
@@ -50,9 +48,7 @@ public class PortfolioService {
         refreshPortfolio();
     }
 
-    /**
-     * Zamyka pozycję i rozlicza zysk/stratę do głównego salda.
-     */
+    //Zamyka pozycję i rozlicza zysk/stratę do głównego salda.
     public void closePosition(Position pos) {
         if (!openPositions.contains(pos)) return;
         
@@ -79,10 +75,8 @@ public class PortfolioService {
         refreshPortfolio();
     }
 
-    /**
-     * Przelicza wartości portfela oraz weryfikuje poziomy SL/TP.
-     * Uruchamiana np. co sekundę w pętli MarketData.
-     */
+    //Przelicza wartości portfela oraz weryfikuje poziomy SL/TP Uruchamiana np. co sekundę w pętli MarketData
+
     public void refreshPortfolio() {
         double totalHoldingsValue = 0.0;
         List<Position> toClose = new ArrayList<>();
