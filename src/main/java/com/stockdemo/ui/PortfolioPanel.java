@@ -36,6 +36,9 @@ public class PortfolioPanel extends VBox {
     private final Label contractValueLbl = new Label("≈ $0.00");
     private final Label buyPriceLbl = new Label("0.00");
 
+    // Wewnętrzny kontener na zawartość
+    private final VBox content = new VBox(0);
+
     public PortfolioPanel(PortfolioService portfolio, ChartPanel chartPanel) {
         this.portfolio = portfolio;
         this.chartPanel = chartPanel;
@@ -58,6 +61,14 @@ public class PortfolioPanel extends VBox {
         portfolio.openPositions.addListener((javafx.collections.ListChangeListener<Position>) c -> refresh());
         portfolio.closedPositions.addListener((javafx.collections.ListChangeListener<ClosedPosition>) c -> refresh());
         refresh();
+
+        // Owinięcie zawartości w ScrollPane żeby nie ucinało przy zmniejszaniu okna
+        ScrollPane scrollPane = new ScrollPane(content);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        scrollPane.setStyle("-fx-background-color: transparent; -fx-background: transparent;");
+        VBox.setVgrow(scrollPane, Priority.ALWAYS);
+        this.getChildren().add(scrollPane);
     }
 
     public void setInstrument(Instrument instrument) {
@@ -100,7 +111,7 @@ public class PortfolioPanel extends VBox {
 
         VBox section = new VBox(6, sectionTitle, balanceLabel, equityLabel, pnlLabel);
         section.getStyleClass().add("portfolio-section");
-        this.getChildren().add(section);
+        content.getChildren().add(section);
     }
 
     private void buildUnifiedTradeForm() {
@@ -238,7 +249,7 @@ public class PortfolioPanel extends VBox {
         buyBtn.setOnMouseClicked(e -> placeOrder(true));
 
         form.getChildren().addAll(volBox, slTpRow, updateSlTpBtn, fundsBox, buyBtn);
-        this.getChildren().add(form);
+        content.getChildren().add(form);
     }
 
     private void buildPositionsAndHistorySection() {
@@ -291,7 +302,7 @@ public class PortfolioPanel extends VBox {
         });
 
         section.getChildren().addAll(tabs, positionsList, historyList);
-        this.getChildren().add(section);
+        content.getChildren().add(section);
     }
 
     private void adjustVolume(double delta) {

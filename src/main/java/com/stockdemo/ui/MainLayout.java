@@ -44,6 +44,8 @@ public class MainLayout extends BorderPane {
 
         StackPane centerStack = new StackPane(chartPanel);
         centerStack.setAlignment(Pos.TOP_CENTER);
+        centerStack.setMinWidth(0);
+        centerStack.setMinHeight(0);
 
         this.setLeft(watchlistPanel);
         this.setCenter(centerStack);

@@ -217,6 +217,8 @@ public class ChartPanel extends BorderPane {
         VBox drawingToolbar = buildDrawingToolbar();
 
         StackPane canvasPane = new StackPane(canvas, loadingLbl);
+        canvasPane.setMinWidth(0);
+        canvasPane.setMinHeight(0);
         loadingLbl.getStyleClass().add("loading-label");
         loadingLbl.setVisible(false);
 
@@ -305,6 +307,8 @@ public class ChartPanel extends BorderPane {
             draggedPosTP = null;
         });
 
+        this.setMinWidth(0);
+        this.setMinHeight(0);
         this.setTop(toolbar);
         this.setLeft(drawingToolbar);
         this.setCenter(canvasPane);
@@ -322,7 +326,7 @@ public class ChartPanel extends BorderPane {
             {"↖", "NONE", "Cursor (default)"},
             {"╱", "TREND_LINE", "Trend Line"},
             {"—", "HORIZONTAL_LINE", "Horizontal Line"},
-            {"▭", "RECTANGLE", "Rectangle"},
+            {"⬜", "RECTANGLE", "Rectangle"},
             {"T", "TEXT", "Text Label"},
         };
 
@@ -342,18 +346,31 @@ public class ChartPanel extends BorderPane {
         sep.setMinHeight(8);
         toolbar.getChildren().add(sep);
 
-        // Przycisk gumki
-        Button btnErase = new Button("✕");
-        btnErase.getStyleClass().add("drawing-tool-btn");
-        btnErase.setTooltip(new Tooltip("Remove last object"));
-        btnErase.setStyle("-fx-text-fill: #f85149;");
-        btnErase.setOnAction(e -> {
+        // Przycisk cofnięcia ostatniego obiektu
+        Button btnUndo = new Button("↺");
+        btnUndo.getStyleClass().add("drawing-tool-btn");
+        btnUndo.setTooltip(new Tooltip("Remove last object"));
+        btnUndo.setStyle("-fx-text-fill: #f85149;");
+        btnUndo.setOnAction(e -> {
             if (!drawings.isEmpty()) {
                 drawings.remove(drawings.size() - 1);
                 redraw();
             }
         });
-        toolbar.getChildren().add(btnErase);
+        toolbar.getChildren().add(btnUndo);
+
+        // Przycisk czyszczenia wszystkich rysunków
+        Button btnClearAll = new Button("✕");
+        btnClearAll.getStyleClass().add("drawing-tool-btn");
+        btnClearAll.setTooltip(new Tooltip("Clear all drawings"));
+        btnClearAll.setStyle("-fx-text-fill: #f85149;");
+        btnClearAll.setOnAction(e -> {
+            if (!drawings.isEmpty()) {
+                drawings.clear();
+                redraw();
+            }
+        });
+        toolbar.getChildren().add(btnClearAll);
 
         return toolbar;
     }
@@ -927,9 +944,9 @@ public class ChartPanel extends BorderPane {
                 double rw = Math.abs(x2 - x1);
                 double rh = Math.abs(y2 - y1);
                 gc.setStroke(DRAWING_COLOR);
-                gc.setLineWidth(1.5);
+                gc.setLineWidth(2.5);
                 gc.strokeRect(rx, ry, rw, rh);
-                gc.setFill(Color.rgb(255, 255, 255, 0.04));
+                gc.setFill(Color.rgb(255, 255, 255, 0.10));
                 gc.fillRect(rx, ry, rw, rh);
                 gc.setFill(DRAWING_COLOR); // przywrócenie
             } else if (obj instanceof DrawingObject.TextLabel tl) {

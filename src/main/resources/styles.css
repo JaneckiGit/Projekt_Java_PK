@@ -11,9 +11,16 @@
 }
 
 /* ── Scrollbar ─────────────────────────────────────────── */
+.scroll-bar:vertical {
+    -fx-pref-width: 8;
+}
+.scroll-bar:horizontal {
+    -fx-pref-height: 8;
+}
 .scroll-bar:vertical .track,
 .scroll-bar:horizontal .track {
     -fx-background-color: #161b22;
+    -fx-background-radius: 4;
 }
 .scroll-bar:vertical .thumb,
 .scroll-bar:horizontal .thumb {
@@ -23,6 +30,8 @@
 .scroll-bar .increment-button,
 .scroll-bar .decrement-button {
     -fx-background-color: transparent;
+    -fx-pref-width: 0;
+    -fx-pref-height: 0;
 }
 
 /* ── Watchlist Panel ───────────────────────────────────── */
@@ -64,9 +73,14 @@
     -fx-background-color: transparent;
     -fx-border-width: 0;
 }
+.instrument-list .scroll-bar:horizontal {
+    -fx-pref-height: 0;
+    -fx-max-height: 0;
+    -fx-opacity: 0;
+}
 .instrument-list .list-cell {
     -fx-background-color: transparent;
-    -fx-padding: 10 16;
+    -fx-padding: 10 12 10 16;
     -fx-border-color: transparent transparent #21262d transparent;
     -fx-border-width: 0 0 1 0;
     -fx-cursor: hand;

@@ -196,6 +196,7 @@ public class WatchlistPanel extends VBox {
         private final Label badge = new Label();
 
         InstrumentCell() {
+            setPrefWidth(0); // Wymusza dopasowanie do szerokości ListView
             symbol.getStyleClass().add("inst-symbol");
             name.getStyleClass().add("inst-name");
             price.getStyleClass().add("inst-price");
