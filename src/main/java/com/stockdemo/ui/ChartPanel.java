@@ -1,9 +1,12 @@
 package com.stockdemo.ui;
 
 import com.stockdemo.model.Candle;
+import com.stockdemo.model.DrawingObject;
+import com.stockdemo.model.DrawingTool;
 import com.stockdemo.model.Instrument;
 import com.stockdemo.model.Position;
 import com.stockdemo.service.MarketDataService;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Cursor;
 import javafx.scene.canvas.Canvas;
@@ -21,6 +24,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.function.Consumer;
 
 public class ChartPanel extends BorderPane {
@@ -40,6 +44,13 @@ public class ChartPanel extends BorderPane {
     private static final Color TP_COLOR = Color.web("#3fb950");
     private static final Color CROSS = Color.web("#30363d");
 
+    // Kolory linii MA
+    private static final Color MA20_COLOR = Color.YELLOW;
+    private static final Color MA50_COLOR = Color.web("#4da6ff");
+
+    // Kolor rysowania
+    private static final Color DRAWING_COLOR = Color.web("#ffffffcc"); // kolor biały, przezroczystość 0.8
+
     private static final int PAD_LEFT = 12;
     private static final int PAD_RIGHT = 60;
     private static final int PAD_TOP = 20;
@@ -55,17 +66,17 @@ public class ChartPanel extends BorderPane {
     private ChartState state = ChartState.IDLE;
     private Consumer<Double> onPriceSelected;
 
-    //Pending order preview
+    //Podgląd zlecenia oczekującego
     private double pendingSlPrice = 0;
     private double pendingTpPrice = 0;
     private double pendingEntryPrice = 0; 
     private boolean showPendingPreview = false;
     private Runnable onPendingSlTpChanged;
 
-    //Open positions current instrument
+    //Otwarte pozycje obecnego instrumentu
     private List<Position> openPositions = new ArrayList<>();
     
-    //Dragging state
+    //Stan przeciągania
     private boolean draggingPendingSL = false;
     private boolean draggingPendingTP = false;
     private Position draggedPosSL = null;
@@ -74,11 +85,30 @@ public class ChartPanel extends BorderPane {
     private double crossX = -1, crossY = -1;
     private double minPrice, maxPrice;
 
+    // === Przełączniki MA ===
+    private boolean showMA20 = false;
+    private boolean showMA50 = false;
+
+    // === Przełącznik RSI ===
+    private boolean showRSI = false;
+
+    // === Narzędzia rysowania ===
+    private DrawingTool activeTool = DrawingTool.NONE;
+    private final List<DrawingObject> drawings = new ArrayList<>();
+    private int drawStartCandleIdx = -1;
+    private double drawStartPrice = -1;
+
     private final Canvas canvas = new Canvas();
     private final Label symbolLabel = new Label("Select instrument");
     private final Label priceLabel = new Label("");
     private final Label changeLabel = new Label("");
-    private final Label loadingLbl = new Label("Loading…");
+    private final Label loadingLbl = new Label("Loadingâ€¦");
+
+    // Drawing toolbar buttons â€” kept as field for active state styling
+    private final List<Button> drawingBtns = new ArrayList<>();
+
+    // Przycisk MA50 do włączania/wyłączania w zależności od ilości wczytanych świec
+    private ToggleButton btnMA50;
 
     public ChartPanel(MarketDataService marketData) {
         this.marketData = marketData;
@@ -87,8 +117,18 @@ public class ChartPanel extends BorderPane {
         //upewnienie sie ze panem moze otrzymac event na exc
         this.setFocusTraversable(true);
         this.setOnKeyPressed(e -> {
-            if (e.getCode() == KeyCode.ESCAPE && state != ChartState.IDLE) {
-                setState(ChartState.IDLE, null);
+            if (e.getCode() == KeyCode.ESCAPE) {
+                // Anuluj rysowanie, które jest w toku
+                if (drawStartCandleIdx >= 0) {
+                    drawStartCandleIdx = -1;
+                    drawStartPrice = -1;
+                    redraw();
+                    return;
+                }
+                // Anuluj tryb wybierania SL/TP
+                if (state != ChartState.IDLE) {
+                    setState(ChartState.IDLE, null);
+                }
             }
         });
 
@@ -132,13 +172,49 @@ public class ChartPanel extends BorderPane {
             redraw();
         });
 
+        // === Przyciski przełączania MA ===
+        ToggleButton btnMA20 = new ToggleButton("MA20");
+        btnMA20.getStyleClass().add("ma-toggle");
+        btnMA20.setStyle("-fx-text-fill: #ffff00;");
+        btnMA20.selectedProperty().addListener((o, old, sel) -> {
+            showMA20 = sel;
+            btnMA20.getStyleClass().removeAll("ma-toggle-active");
+            if (sel) btnMA20.getStyleClass().add("ma-toggle-active");
+            redraw();
+        });
+
+        btnMA50 = new ToggleButton("MA50");
+        btnMA50.getStyleClass().add("ma-toggle");
+        btnMA50.setStyle("-fx-text-fill: #4da6ff;");
+        btnMA50.selectedProperty().addListener((o, old, sel) -> {
+            showMA50 = sel;
+            btnMA50.getStyleClass().removeAll("ma-toggle-active");
+            if (sel) btnMA50.getStyleClass().add("ma-toggle-active");
+            redraw();
+        });
+
+        // === Przycisk przełączania RSI ===
+        ToggleButton btnRSI = new ToggleButton("RSI");
+        btnRSI.getStyleClass().add("rsi-toggle");
+        btnRSI.selectedProperty().addListener((o, old, sel) -> {
+            showRSI = sel;
+            btnRSI.getStyleClass().removeAll("rsi-toggle-active");
+            if (sel) btnRSI.getStyleClass().add("rsi-toggle-active");
+            redraw();
+        });
+
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
         HBox toolbar = new HBox(12, symbolLabel, priceLabel, changeLabel, spacer, ranges, new Separator(),
-                new HBox(4, btnLine, btnCandle));
+                new HBox(4, btnLine, btnCandle), new Separator(),
+                new HBox(4, btnMA20, btnMA50), new Separator(),
+                btnRSI);
         toolbar.setId("chartToolbar");
         toolbar.setAlignment(Pos.CENTER_LEFT);
+
+        // === Pasek narzędzi rysowania (lewy VBox) ===
+        VBox drawingToolbar = buildDrawingToolbar();
 
         StackPane canvasPane = new StackPane(canvas, loadingLbl);
         loadingLbl.getStyleClass().add("loading-label");
@@ -160,7 +236,13 @@ public class ChartPanel extends BorderPane {
             redraw();
         });
         canvas.setOnMousePressed(e -> {
-            this.requestFocus(); // For ESC key
+            this.requestFocus(); // Dla klawisza ESC
+
+            // --- Narzędzia rysowania (tylko w trybie IDLE, gdy wybrane jest jakieś narzędzie) ---
+            if (state == ChartState.IDLE && activeTool != DrawingTool.NONE) {
+                handleDrawingClick(e.getX(), e.getY());
+                return;
+            }
             
             if (state != ChartState.IDLE) {
                 double price = yToPrice(e.getY());
@@ -171,7 +253,7 @@ public class ChartPanel extends BorderPane {
                 return;
             }
 
-            //Check hits
+            //Sprawdzenie trafień (czy kliknięto na istniejący element)
             double my = e.getY();
             
             //sprawdz otwarte pozycje
@@ -224,15 +306,142 @@ public class ChartPanel extends BorderPane {
         });
 
         this.setTop(toolbar);
+        this.setLeft(drawingToolbar);
         this.setCenter(canvasPane);
     }
+
+    // ===================== Pasek rysowania =====================
+
+    private VBox buildDrawingToolbar() {
+        VBox toolbar = new VBox(4);
+        toolbar.setId("drawingToolbar");
+        toolbar.setAlignment(Pos.TOP_CENTER);
+        toolbar.setPadding(new Insets(8, 4, 8, 4));
+
+        String[][] tools = {
+            {"↖", "NONE", "Cursor (default)"},
+            {"╱", "TREND_LINE", "Trend Line"},
+            {"—", "HORIZONTAL_LINE", "Horizontal Line"},
+            {"▭", "RECTANGLE", "Rectangle"},
+            {"T", "TEXT", "Text Label"},
+        };
+
+        for (String[] t : tools) {
+            Button btn = new Button(t[0]);
+            btn.getStyleClass().add("drawing-tool-btn");
+            btn.setTooltip(new Tooltip(t[2]));
+            if (t[1].equals("NONE")) btn.getStyleClass().add("drawing-tool-btn-active");
+            DrawingTool tool = DrawingTool.valueOf(t[1]);
+            btn.setOnAction(e -> selectDrawingTool(tool));
+            drawingBtns.add(btn);
+            toolbar.getChildren().add(btn);
+        }
+
+        // Linia oddzielająca
+        Region sep = new Region();
+        sep.setMinHeight(8);
+        toolbar.getChildren().add(sep);
+
+        // Przycisk gumki
+        Button btnErase = new Button("✕");
+        btnErase.getStyleClass().add("drawing-tool-btn");
+        btnErase.setTooltip(new Tooltip("Remove last object"));
+        btnErase.setStyle("-fx-text-fill: #f85149;");
+        btnErase.setOnAction(e -> {
+            if (!drawings.isEmpty()) {
+                drawings.remove(drawings.size() - 1);
+                redraw();
+            }
+        });
+        toolbar.getChildren().add(btnErase);
+
+        return toolbar;
+    }
+
+    private void selectDrawingTool(DrawingTool tool) {
+        this.activeTool = tool;
+        this.drawStartCandleIdx = -1;
+        this.drawStartPrice = -1;
+
+        // Aktualizacja stylów przycisków
+        for (int i = 0; i < drawingBtns.size(); i++) {
+            drawingBtns.get(i).getStyleClass().removeAll("drawing-tool-btn-active");
+        }
+        // Zmapuj narzędzie na indeks przycisku
+        int idx = tool.ordinal(); // NONE=0, TREND_LINE=1, HORIZONTAL_LINE=2, RECTANGLE=3, TEXT=4
+        if (idx >= 0 && idx < drawingBtns.size()) {
+            drawingBtns.get(idx).getStyleClass().add("drawing-tool-btn-active");
+        }
+
+        if (tool != DrawingTool.NONE) {
+            canvas.setCursor(Cursor.CROSSHAIR);
+        } else {
+            canvas.setCursor(Cursor.DEFAULT);
+        }
+    }
+
+    private void handleDrawingClick(double mx, double my) {
+        if (candles.isEmpty()) return;
+
+        double W = canvas.getWidth();
+        double H = canvas.getHeight();
+        double cX = PAD_LEFT;
+        double cH = getChartAreaH(H);
+        double cW = W - PAD_LEFT - PAD_RIGHT;
+
+        // Obsługuj kliknięcia tylko wewnątrz obszaru wykresu
+        if (my < PAD_TOP || my > PAD_TOP + cH) return;
+
+        int candleIdx = xToCandleIndex(mx, cX, cW);
+        double price = yToPriceInArea(my, PAD_TOP, cH);
+
+        switch (activeTool) {
+            case HORIZONTAL_LINE -> {
+                drawings.add(new DrawingObject.HorizontalLine(price));
+                redraw();
+            }
+            case TEXT -> {
+                TextInputDialog dialog = new TextInputDialog();
+                dialog.setTitle("Text");
+                dialog.setHeaderText("Enter label text:");
+                dialog.setContentText("Text:");
+                Optional<String> result = dialog.showAndWait();
+                result.ifPresent(text -> {
+                    if (!text.isBlank()) {
+                        drawings.add(new DrawingObject.TextLabel(candleIdx, price, text));
+                        redraw();
+                    }
+                });
+            }
+            case TREND_LINE, RECTANGLE -> {
+                if (drawStartCandleIdx < 0) {
+                    // Pierwsze kliknięcie
+                    drawStartCandleIdx = candleIdx;
+                    drawStartPrice = price;
+                } else {
+                    // Second click â€” save object
+                    if (activeTool == DrawingTool.TREND_LINE) {
+                        drawings.add(new DrawingObject.TrendLine(drawStartCandleIdx, drawStartPrice, candleIdx, price));
+                    } else {
+                        drawings.add(new DrawingObject.Rectangle(drawStartCandleIdx, drawStartPrice, candleIdx, price));
+                    }
+                    drawStartCandleIdx = -1;
+                    drawStartPrice = -1;
+                    redraw();
+                }
+            }
+            default -> {}
+        }
+    }
+
+    // ===================== Publiczne API =====================
     
     public void setState(ChartState newState, Consumer<Double> callback) {
         this.state = newState;
         this.onPriceSelected = callback;
         if (state != ChartState.IDLE) {
             canvas.setCursor(Cursor.CROSSHAIR);
-        } else {
+        } else if (activeTool == DrawingTool.NONE) {
             canvas.setCursor(Cursor.DEFAULT);
         }
         redraw();
@@ -297,17 +506,97 @@ public class ChartPanel extends BorderPane {
         }
     }
 
+    // ===================== Ładowanie wykresu =====================
+
     private void loadChart() {
         if (currentInstrument == null)
             return;
+        drawings.clear();
+        drawStartCandleIdx = -1;
+        drawStartPrice = -1;
         loadingLbl.setVisible(true);
         marketData.loadCandles(currentInstrument, activeRange, data -> {
             this.candles = data;
             loadingLbl.setVisible(false);
+            updateMA50State();
             refreshPrice(currentInstrument);
             redraw();
         });
     }
+
+    private void updateMA50State() {
+        boolean enough = candles.size() >= 50;
+        btnMA50.setDisable(!enough);
+        if (!enough) {
+            btnMA50.setSelected(false);
+            showMA50 = false;
+            btnMA50.setStyle("-fx-text-fill: #484f58;");
+            btnMA50.setTooltip(new Tooltip("Not enough data for this range"));
+        } else {
+            btnMA50.setStyle("-fx-text-fill: #4da6ff;");
+            btnMA50.setTooltip(null);
+        }
+    }
+
+    // ===================== Metody pomocnicze do współrzędnych =====================
+
+    /** Zwraca wysokość obszaru wykresu (bez uwzględnienia panelu RSI) */
+    private double getChartAreaH(double totalH) {
+        double available = totalH - PAD_TOP - PAD_BOT;
+        return showRSI ? available * 0.70 : available;
+    }
+
+    /** Candle layout parameters â€” same formula as drawCandles/drawLine */
+    private double getEffectiveN() {
+        return Math.max(candles.size(), 50.0);
+    }
+
+    private double getTotalW(double cW) {
+        return cW / getEffectiveN();
+    }
+
+    private double getStartX(double cX, double cW) {
+        int n = candles.size();
+        double totalW = getTotalW(cW);
+        return cX + cW - (n * totalW);
+    }
+
+    /** Convert candle index to pixel X â€” uses startX + (i + 0.5) * totalW */
+    private double candleIndexToX(int idx, double cX, double cW) {
+        double totalW = getTotalW(cW);
+        double startX = getStartX(cX, cW);
+        return startX + (idx + 0.5) * totalW;
+    }
+
+    /** Convert pixel X to candle index â€” exact inverse of candleIndexToX */
+    private int xToCandleIndex(double x, double cX, double cW) {
+        double totalW = getTotalW(cW);
+        double startX = getStartX(cX, cW);
+        int idx = (int) Math.round((x - startX) / totalW - 0.5);
+        return Math.max(0, Math.min(candles.size() - 1, idx));
+    }
+
+    private double priceToYInArea(double price, double areaY, double areaH) {
+        double ratio = (maxPrice - price) / (maxPrice - minPrice);
+        return areaY + ratio * areaH;
+    }
+
+    private double yToPriceInArea(double y, double areaY, double areaH) {
+        double ratio = (y - areaY) / areaH;
+        return maxPrice - ratio * (maxPrice - minPrice);
+    }
+
+    private double priceToY(double price) {
+        double cH = getChartAreaH(canvas.getHeight());
+        return priceToYInArea(price, PAD_TOP, cH);
+    }
+
+    private double yToPrice(double y) {
+        double cH = getChartAreaH(canvas.getHeight());
+        return yToPriceInArea(y, PAD_TOP, cH);
+    }
+
+    // ===================== Główne odświeżanie (Redraw) =====================
 
     private void redraw() {
         if (canvas.getWidth() <= 0 || canvas.getHeight() <= 0)
@@ -338,7 +627,7 @@ public class ChartPanel extends BorderPane {
         double cX = PAD_LEFT;
         double cY = PAD_TOP;
         double cW = W - PAD_LEFT - PAD_RIGHT;
-        double cH = H - PAD_TOP - PAD_BOT;
+        double cH = getChartAreaH(H);
 
         drawGrid(gc, cX, cY, cW, cH, priceSpan);
         if (showCandles)
@@ -346,12 +635,30 @@ public class ChartPanel extends BorderPane {
         else
             drawLine(gc, cX, cY, cW, cH);
 
+        // Wskaźniki MA
+        if (showMA20) drawMA(gc, cX, cY, cW, cH, 20, MA20_COLOR);
+        if (showMA50) drawMA(gc, cX, cY, cW, cH, 50, MA50_COLOR);
+
+
         drawPositions(gc, cX, cY, cW, cH);
         drawPendingLines(gc, cX, cY, cW, cH);
+
+        // Narysowane obiekty
+        drawDrawings(gc, cX, cY, cW, cH);
+        drawTempDrawing(gc, cX, cY, cW, cH);
         
         drawCrosshairAndSelection(gc, cX, cY, cW, cH, W, H);
         drawAxisLabels(gc, cX, cY, cW, cH, W, priceSpan);
+
+        // Panel RSI
+        if (showRSI) {
+            double rsiY = cY + cH + 10;
+            double rsiH = (H - PAD_TOP - PAD_BOT) * 0.30 - 10;
+            drawRSIPanel(gc, rsiY, rsiH, cX, cW);
+        }
     }
+
+    // ===================== Siatka =====================
 
     private void drawGrid(GraphicsContext gc, double cX, double cY, double cW, double cH, double priceSpan) {
         gc.setStroke(GRID);
@@ -366,12 +673,13 @@ public class ChartPanel extends BorderPane {
         }
     }
 
+    // ===================== Świece / Linia =====================
+
     private void drawCandles(GraphicsContext gc, double cX, double cY, double cW, double cH) {
         int n = candles.size();
-        double effectiveN = Math.max(n, 50.0);
-        double totalW = cW / effectiveN;
+        double totalW = getTotalW(cW);
         double bodyW = Math.max(1, totalW * 0.6);
-        double startX = cX + cW - (n * totalW);
+        double startX = getStartX(cX, cW);
 
         for (int i = 0; i < n; i++) {
             Candle c = candles.get(i);
@@ -397,9 +705,8 @@ public class ChartPanel extends BorderPane {
         int n = candles.size();
         if (n < 2)
             return;
-        double effectiveN = Math.max(n, 50.0);
-        double totalW = cW / effectiveN;
-        double startX = cX + cW - (n * totalW);
+        double totalW = getTotalW(cW);
+        double startX = getStartX(cX, cW);
 
         gc.setStroke(LINE_COLOR);
         gc.setLineWidth(1.5);
@@ -414,6 +721,252 @@ public class ChartPanel extends BorderPane {
         }
         gc.stroke();
     }
+
+    // ===================== Średnia ruchoma (MA) =====================
+
+    private void drawMA(GraphicsContext gc, double cX, double cY, double cW, double cH, int period, Color color) {
+        int n = candles.size();
+        if (n < period) return;
+
+        double totalW = getTotalW(cW);
+        double startX = getStartX(cX, cW);
+
+        gc.setStroke(color);
+        gc.setLineWidth(1.5);
+        gc.beginPath();
+
+        boolean started = false;
+        double sum = 0;
+
+        // Wstępne obliczenie pierwszej sumy
+        for (int i = 0; i < period - 1; i++) {
+            sum += candles.get(i).close();
+        }
+
+        for (int i = period - 1; i < n; i++) {
+            sum += candles.get(i).close();
+            double ma = sum / period;
+            double x = startX + (i + 0.5) * totalW;
+            double y = priceToYInArea(ma, cY, cH);
+
+            if (!started) {
+                gc.moveTo(x, y);
+                started = true;
+            } else {
+                gc.lineTo(x, y);
+            }
+
+            sum -= candles.get(i - period + 1).close();
+        }
+        gc.stroke();
+    }
+
+    // ===================== Wskaźnik RSI =====================
+
+    private double[] computeRSI(int period) {
+        int n = candles.size();
+        double[] rsi = new double[n];
+        if (n <= period) return rsi;
+
+        // Obliczenie różnic (zmian) ceny
+        double[] gains = new double[n];
+        double[] losses = new double[n];
+        for (int i = 1; i < n; i++) {
+            double change = candles.get(i).close() - candles.get(i - 1).close();
+            gains[i] = Math.max(0, change);
+            losses[i] = Math.max(0, -change);
+        }
+
+        // Pierwsza średnia (wg Wildera to prosta średnia ruchoma)
+        double avgGain = 0, avgLoss = 0;
+        for (int i = 1; i <= period; i++) {
+            avgGain += gains[i];
+            avgLoss += losses[i];
+        }
+        avgGain /= period;
+        avgLoss /= period;
+
+        if (avgLoss == 0) {
+            rsi[period] = 100;
+        } else {
+            double rs = avgGain / avgLoss;
+            rsi[period] = 100 - (100.0 / (1 + rs));
+        }
+
+        // Kolejne wartości (wykorzystujące wygładzanie Wildera)
+        for (int i = period + 1; i < n; i++) {
+            avgGain = (avgGain * (period - 1) + gains[i]) / period;
+            avgLoss = (avgLoss * (period - 1) + losses[i]) / period;
+
+            if (avgLoss == 0) {
+                rsi[i] = 100;
+            } else {
+                double rs = avgGain / avgLoss;
+                rsi[i] = 100 - (100.0 / (1 + rs));
+            }
+        }
+
+        return rsi;
+    }
+
+    private void drawRSIPanel(GraphicsContext gc, double rsiY, double rsiH, double cX, double cW) {
+        if (rsiH <= 0) return;
+
+        // Tło
+        gc.setFill(BG);
+        gc.fillRect(cX, rsiY, cW, rsiH);
+
+        // Linia oddzielająca panele
+        gc.setStroke(GRID);
+        gc.setLineWidth(1);
+        gc.strokeLine(cX, rsiY, cX + cW, rsiY);
+
+        // Strefa wykupienia (70-100): jasnoczerwona
+        double y70 = rsiY + rsiH * (1 - 70.0 / 100.0);
+        double y100 = rsiY;
+        gc.setFill(Color.rgb(239, 83, 80, 0.05));
+        gc.fillRect(cX, y100, cW, y70 - y100);
+
+        // Strefa wyprzedania (0-30): jasnozielona
+        double y30 = rsiY + rsiH * (1 - 30.0 / 100.0);
+        double y0 = rsiY + rsiH;
+        gc.setFill(Color.rgb(38, 166, 154, 0.05));
+        gc.fillRect(cX, y30, cW, y0 - y30);
+
+        // Linie siatki dla wskaźnika RSI
+        gc.setStroke(GRID);
+        gc.setLineWidth(0.5);
+        for (int level : new int[]{0, 30, 50, 70, 100}) {
+            double y = rsiY + rsiH * (1 - level / 100.0);
+            gc.strokeLine(cX, y, cX + cW, y);
+        }
+
+        // Przerywane linie poziome na wysokości 30 i 70
+        gc.setLineWidth(1.0);
+        gc.setLineDashes(4, 4);
+
+        gc.setStroke(Color.web("#3fb950")); // zielona dla 30
+        gc.strokeLine(cX, y30, cX + cW, y30);
+
+        gc.setStroke(Color.web("#ef5350")); // czerwona dla 70
+        gc.strokeLine(cX, y70, cX + cW, y70);
+
+        gc.setLineDashes();
+
+        // Linia wskaźnika RSI
+        double[] rsi = computeRSI(14);
+        int n = candles.size();
+        if (n <= 14) return;
+
+        double totalW = getTotalW(cW);
+        double startX = getStartX(cX, cW);
+
+        gc.setStroke(Color.WHITE);
+        gc.setLineWidth(1.5);
+        gc.beginPath();
+        boolean started = false;
+        for (int i = 14; i < n; i++) {
+            double x = startX + (i + 0.5) * totalW;
+            double y = rsiY + rsiH * (1 - rsi[i] / 100.0);
+            if (!started) {
+                gc.moveTo(x, y);
+                started = true;
+            } else {
+                gc.lineTo(x, y);
+            }
+        }
+        gc.stroke();
+
+        // Podpis osi dla wartości RSI
+        gc.setFill(AXIS_TEXT);
+        gc.setFont(Font.font("Inter", 9));
+        for (int level : new int[]{0, 30, 50, 70, 100}) {
+            double y = rsiY + rsiH * (1 - level / 100.0);
+            gc.fillText(String.valueOf(level), cX + cW + 4, y + 4);
+        }
+
+        // Etykieta "RSI(14)"
+        gc.setFill(AXIS_TEXT);
+        gc.setFont(Font.font("Inter", FontWeight.BOLD, 10));
+        gc.fillText("RSI(14)", cX + 4, rsiY + 14);
+    }
+
+    // ===================== Rysowanie elementów =====================
+
+    private void drawDrawings(GraphicsContext gc, double cX, double cY, double cW, double cH) {
+        gc.setStroke(DRAWING_COLOR);
+        gc.setFill(DRAWING_COLOR);
+        gc.setLineWidth(1.5);
+        gc.setLineDashes();
+
+        for (DrawingObject obj : drawings) {
+            if (obj instanceof DrawingObject.TrendLine tl) {
+                double x1 = candleIndexToX(tl.candleIdx1(), cX, cW);
+                double y1 = priceToYInArea(tl.price1(), cY, cH);
+                double x2 = candleIndexToX(tl.candleIdx2(), cX, cW);
+                double y2 = priceToYInArea(tl.price2(), cY, cH);
+                gc.setStroke(DRAWING_COLOR);
+                gc.setLineWidth(1.5);
+                gc.strokeLine(x1, y1, x2, y2);
+            } else if (obj instanceof DrawingObject.HorizontalLine hl) {
+                double y = priceToYInArea(hl.price(), cY, cH);
+                if (y >= cY && y <= cY + cH) {
+                    gc.setStroke(DRAWING_COLOR);
+                    gc.setLineWidth(1.5);
+                    gc.strokeLine(cX, y, cX + cW, y);
+                    gc.setFont(Font.font("Inter", 10));
+                    gc.fillText(formatPrice(hl.price()), cX + cW + 4, y + 4);
+                }
+            } else if (obj instanceof DrawingObject.Rectangle rect) {
+                double x1 = candleIndexToX(rect.candleIdx1(), cX, cW);
+                double y1 = priceToYInArea(rect.price1(), cY, cH);
+                double x2 = candleIndexToX(rect.candleIdx2(), cX, cW);
+                double y2 = priceToYInArea(rect.price2(), cY, cH);
+                double rx = Math.min(x1, x2);
+                double ry = Math.min(y1, y2);
+                double rw = Math.abs(x2 - x1);
+                double rh = Math.abs(y2 - y1);
+                gc.setStroke(DRAWING_COLOR);
+                gc.setLineWidth(1.5);
+                gc.strokeRect(rx, ry, rw, rh);
+                gc.setFill(Color.rgb(255, 255, 255, 0.04));
+                gc.fillRect(rx, ry, rw, rh);
+                gc.setFill(DRAWING_COLOR); // przywrócenie
+            } else if (obj instanceof DrawingObject.TextLabel tl) {
+                double x = candleIndexToX(tl.candleIdx(), cX, cW);
+                double y = priceToYInArea(tl.price(), cY, cH);
+                gc.setFill(DRAWING_COLOR);
+                gc.setFont(Font.font("Inter", FontWeight.BOLD, 12));
+                gc.fillText(tl.text(), x, y);
+            }
+        }
+    }
+
+    private void drawTempDrawing(GraphicsContext gc, double cX, double cY, double cW, double cH) {
+        if (drawStartCandleIdx < 0 || crossX < 0 || crossY < 0) return;
+        if (activeTool != DrawingTool.TREND_LINE && activeTool != DrawingTool.RECTANGLE) return;
+
+        double x1 = candleIndexToX(drawStartCandleIdx, cX, cW);
+        double y1 = priceToYInArea(drawStartPrice, cY, cH);
+        double clampedY = Math.max(cY, Math.min(cY + cH, crossY));
+
+        gc.setStroke(DRAWING_COLOR);
+        gc.setLineWidth(1.5);
+        gc.setLineDashes(4, 4);
+
+        if (activeTool == DrawingTool.TREND_LINE) {
+            gc.strokeLine(x1, y1, crossX, clampedY);
+        } else { // Obsługa rysowania prostokąta
+            double rx = Math.min(x1, crossX);
+            double ry = Math.min(y1, clampedY);
+            double rw = Math.abs(crossX - x1);
+            double rh = Math.abs(clampedY - y1);
+            gc.strokeRect(rx, ry, rw, rh);
+        }
+        gc.setLineDashes();
+    }
+
+    // ===================== Pozycje =====================
     
     private void drawPositions(GraphicsContext gc, double cX, double cY, double cW, double cH) {
         if (currentInstrument == null) return;
@@ -421,7 +974,7 @@ public class ChartPanel extends BorderPane {
         for (Position p : openPositions) {
             if (!p.getInstrument().getSymbol().equals(currentInstrument.getSymbol())) continue;
             
-            // Draw Entry Line
+            // Rysowanie poziomej linii ceny wejścia (Entry)
             double entryY = priceToYInArea(p.getEntryPrice(), cY, cH);
             if (entryY >= cY && entryY <= cY + cH) {
                 gc.setStroke(ENTRY_COLOR);
@@ -432,7 +985,7 @@ public class ChartPanel extends BorderPane {
                 gc.fillText("Entry " + formatPrice(p.getEntryPrice()), cX + 5, entryY - 4);
             }
             
-            // Draw SL Line
+            // Rysowanie poziomej linii Stop Loss (SL)
             if (p.getStopLoss() > 0) {
                 double slY = priceToYInArea(p.getStopLoss(), cY, cH);
                 if (slY >= cY && slY <= cY + cH) {
@@ -447,7 +1000,7 @@ public class ChartPanel extends BorderPane {
                 }
             }
             
-            //Draw TP Line
+            // Rysowanie poziomej linii Take Profit (TP)
             if (p.getTakeProfit() > 0) {
                 double tpY = priceToYInArea(p.getTakeProfit(), cY, cH);
                 if (tpY >= cY && tpY <= cY + cH) {
@@ -464,11 +1017,13 @@ public class ChartPanel extends BorderPane {
         }
     }
 
+    // ===================== Linie oczekujące =====================
+
     private void drawPendingLines(GraphicsContext gc, double cX, double cY, double cW, double cH) {
         if (showPendingPreview && pendingEntryPrice > 0) {
             double entryY = priceToYInArea(pendingEntryPrice, cY, cH);
             if (entryY >= cY && entryY <= cY + cH) {
-                gc.setStroke(ENTRY_COLOR.deriveColor(1, 1, 1, 0.6)); // Transparent blue
+                gc.setStroke(ENTRY_COLOR.deriveColor(1, 1, 1, 0.6)); // Półprzezroczysty niebieski
                 gc.setLineWidth(1.5);
                 gc.setLineDashes(6, 4);
                 gc.strokeLine(cX, entryY, cX + cW, entryY);
@@ -503,6 +1058,8 @@ public class ChartPanel extends BorderPane {
         }
     }
 
+    // ===================== Kursor celownika (Crosshair) =====================
+
     private void drawCrosshairAndSelection(GraphicsContext gc, double cX, double cY, double cW, double cH, double W, double H) {
         if (crossX < cX || crossX > cX + cW || crossY < cY || crossY > cY + cH)
             return;
@@ -518,7 +1075,7 @@ public class ChartPanel extends BorderPane {
         gc.strokeLine(crossX, cY, crossX, cY + cH);
         gc.setLineDashes();
 
-        double price = yToPrice(crossY);
+        double price = yToPriceInArea(crossY, cY, cH);
         gc.setFill(crossColor.equals(CROSS) ? Color.web("#30363d") : crossColor.deriveColor(1,1,1,0.8));
         gc.fillRoundRect(cX + cW + 2, crossY - 9, 58, 18, 4, 4);
         
@@ -533,6 +1090,8 @@ public class ChartPanel extends BorderPane {
             gc.fillText("Press ESC to cancel", crossX + 10, crossY + 15);
         }
     }
+
+    // ===================== Etykiety osi =====================
 
     private void drawAxisLabels(GraphicsContext gc, double cX, double cY, double cW, double cH, double W,
             double priceSpan) {
@@ -550,32 +1109,24 @@ public class ChartPanel extends BorderPane {
         int n = candles.size();
         int step = Math.max(1, n / 6);
         DateTimeFormatter fmt = DateTimeFormatter.ofPattern("MM/dd").withZone(ZoneId.systemDefault());
-        double effectiveN = Math.max(n, 50.0);
-        double totalW = cW / effectiveN;
-        double startX = cX + cW - (n * totalW);
+        double totalW = getTotalW(cW);
+        double startX = getStartX(cX, cW);
+
+        // Gdy widoczny jest RSI, rysuj etykiety z datą poniżej panelu RSI
+        double dateLabelsY = cY + cH + 20;
+        if (showRSI) {
+            double rsiH = (canvas.getHeight() - PAD_TOP - PAD_BOT) * 0.30 - 10;
+            dateLabelsY = cY + cH + 10 + rsiH + 16;
+        }
 
         for (int i = 0; i < n; i += step) {
             double x = startX + (i + 0.5) * totalW;
             String label = fmt.format(Instant.ofEpochSecond(candles.get(i).timestamp()));
-            gc.fillText(label, x - 15, cY + cH + 20);
+            gc.fillText(label, x - 15, dateLabelsY);
         }
     }
 
-    private double priceToYInArea(double price, double areaY, double areaH) {
-        double ratio = (maxPrice - price) / (maxPrice - minPrice);
-        return areaY + ratio * areaH;
-    }
-
-    private double priceToY(double price) {
-        double cH = canvas.getHeight() - PAD_TOP - PAD_BOT;
-        return priceToYInArea(price, PAD_TOP, cH);
-    }
-
-    private double yToPrice(double y) {
-        double cH = canvas.getHeight() - PAD_TOP - PAD_BOT;
-        double ratio = (y - PAD_TOP) / cH;
-        return maxPrice - ratio * (maxPrice - minPrice);
-    }
+    // ===================== Formatowanie =====================
 
     private String formatPrice(double p) {
         try {
@@ -589,3 +1140,4 @@ public class ChartPanel extends BorderPane {
         }
     }
 }
+

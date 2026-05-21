@@ -377,3 +377,77 @@
 .tab-inactive:hover {
     -fx-text-fill: #c9d1d9;
 }
+
+/* ── Drawing Toolbar (left sidebar) ──────────────────── */
+#drawingToolbar {
+    -fx-background-color: #161b22;
+    -fx-border-color: #21262d;
+    -fx-border-width: 0 1 0 0;
+    -fx-padding: 8 4 8 4;
+    -fx-spacing: 4;
+}
+
+.drawing-tool-btn {
+    -fx-background-color: #21262d;
+    -fx-text-fill: #8b949e;
+    -fx-font-size: 16px;
+    -fx-font-weight: 700;
+    -fx-min-width: 32;
+    -fx-max-width: 32;
+    -fx-min-height: 32;
+    -fx-max-height: 32;
+    -fx-padding: 0;
+    -fx-background-radius: 6;
+    -fx-cursor: hand;
+}
+.drawing-tool-btn:hover {
+    -fx-background-color: #30363d;
+    -fx-text-fill: #e6edf3;
+}
+.drawing-tool-btn-active {
+    -fx-background-color: #1f6feb;
+    -fx-text-fill: #ffffff;
+}
+
+/* ── MA Toggle Buttons ───────────────────────────────── */
+.ma-toggle {
+    -fx-background-color: #21262d;
+    -fx-font-size: 11px;
+    -fx-font-weight: 700;
+    -fx-padding: 3 8;
+    -fx-background-radius: 5;
+    -fx-border-radius: 5;
+    -fx-cursor: hand;
+}
+.ma-toggle:hover {
+    -fx-background-color: #30363d;
+}
+.ma-toggle-active {
+    -fx-background-color: #30363d;
+    -fx-border-color: #484f58;
+    -fx-border-width: 1;
+    -fx-border-radius: 5;
+}
+
+/* ── RSI Toggle Button ───────────────────────────────── */
+.rsi-toggle {
+    -fx-background-color: #21262d;
+    -fx-text-fill: #8b949e;
+    -fx-font-size: 11px;
+    -fx-font-weight: 700;
+    -fx-padding: 3 10;
+    -fx-background-radius: 5;
+    -fx-border-radius: 5;
+    -fx-cursor: hand;
+}
+.rsi-toggle:hover {
+    -fx-background-color: #30363d;
+    -fx-text-fill: #e6edf3;
+}
+.rsi-toggle-active {
+    -fx-background-color: #30363d;
+    -fx-text-fill: #e6edf3;
+    -fx-border-color: #1f6feb;
+    -fx-border-width: 1;
+    -fx-border-radius: 5;
+}
