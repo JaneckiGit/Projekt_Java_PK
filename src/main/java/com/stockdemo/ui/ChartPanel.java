@@ -605,10 +605,27 @@ public class ChartPanel extends BorderPane {
         changeLabel.setText(sign + String.format(Locale.US, "%.2f%%", ch));
         changeLabel.getStyleClass().removeAll("change-positive", "change-negative");
         changeLabel.getStyleClass().add(ch >= 0 ? "change-positive" : "change-negative");
-        
-        //zaktualizuj preview rynku
-        if (showPendingPreview && currentInstrument != null) {
-            redraw(); //Simple redraw will fetch latest ask/bid if needed
+
+        // ── Aktualizacja ostatniej świecy w czasie rzeczywistym ──────────────
+        // Na podstawie aktualnej ceny z Instrument aktualizujemy close, high i low
+        // ostatniej świecy bez dodatkowych zapytań HTTP. Dzięki temu wykres
+        // odzwierciedla bieżący ruch ceny między kolejnymi pobraniami świec z API.
+        if (!candles.isEmpty()) {
+            double newPrice = p;
+            Candle last = candles.get(candles.size() - 1);
+            Candle updated = new Candle(
+                    last.timestamp(),
+                    last.open(),
+                    Math.max(last.high(), newPrice),
+                    Math.min(last.low(), newPrice),
+                    newPrice,
+                    last.volume()
+            );
+            candles.set(candles.size() - 1, updated);
+            redraw();
+        } else if (showPendingPreview && currentInstrument != null) {
+            // Jeśli brak świec, odświeżamy tylko podgląd oczekującego zlecenia
+            redraw();
         }
     }
 
@@ -1269,7 +1286,9 @@ public class ChartPanel extends BorderPane {
         int lastVis = getLastVisibleIndex();
         int vis = lastVis - firstVis;
         int step = Math.max(1, vis / 6);
-        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("MM/dd").withZone(ZoneId.systemDefault());
+        // Dla wykresu 1D (intraday) pokazujemy godziny zamiast dat
+        String pattern = "1D".equals(activeRange) ? "HH:mm" : "MM/dd";
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern(pattern).withZone(ZoneId.systemDefault());
 
         // Gdy widoczny jest RSI, rysuj etykiety z datą poniżej panelu RSI
         double dateLabelsY = cY + cH + 20;

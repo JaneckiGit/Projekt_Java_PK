@@ -34,6 +34,13 @@ public class PortfolioPanel extends VBox {
     private final Label availableFundsLbl = new Label("$0.00");
     private final Label marginValueLbl = new Label("≈ $0.00");
     private final Label contractValueLbl = new Label("≈ $0.00");
+
+    // Etykiety statystyk
+    private final Label winRateLbl = new Label("—");
+    private final Label totalPnlLbl = new Label("—");
+    private final Label bestTradeLbl = new Label("—");
+    private final Label worstTradeLbl = new Label("—");
+    private final Label avgPnlLbl = new Label("—");
     private final Label buyPriceLbl = new Label("0.00");
 
     // Wewnętrzny kontener na zawartość
@@ -48,6 +55,7 @@ public class PortfolioPanel extends VBox {
         buildAccountSection();
         buildUnifiedTradeForm();
         buildPositionsAndHistorySection();
+        buildStatsSection();
         
         //Przekaż listę otwartych pozycji do ChartPanel
         chartPanel.setOpenPositions(portfolio.openPositions);
@@ -97,6 +105,7 @@ public class PortfolioPanel extends VBox {
         
         positionsList.refresh();
         historyList.refresh();
+        refreshStats();
         
         updateOrderValue(); //to refresh pending preview on chart
     }
@@ -307,6 +316,74 @@ public class PortfolioPanel extends VBox {
 
         section.getChildren().addAll(tabs, positionsList, historyList);
         content.getChildren().add(section);
+    }
+
+    private void buildStatsSection() {
+        Label sectionTitle = new Label("STATISTICS");
+        sectionTitle.getStyleClass().add("section-title");
+
+        VBox section = new VBox(6, sectionTitle,
+                buildStatRow("Win Rate", winRateLbl),
+                buildStatRow("Total P&L", totalPnlLbl),
+                buildStatRow("Best Trade", bestTradeLbl),
+                buildStatRow("Worst Trade", worstTradeLbl),
+                buildStatRow("Avg P&L", avgPnlLbl)
+        );
+        section.getStyleClass().add("portfolio-section");
+        content.getChildren().add(section);
+    }
+
+    private HBox buildStatRow(String labelText, Label valueLabel) {
+        Label key = new Label(labelText);
+        key.setStyle("-fx-text-fill: #8b949e; -fx-font-size: 12px;");
+        valueLabel.setStyle("-fx-text-fill: #8b949e; -fx-font-size: 12px; -fx-font-weight: bold;");
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+        HBox row = new HBox();
+        row.getChildren().setAll(key, spacer, valueLabel);
+        return row;
+    }
+
+    private void refreshStats() {
+        var list = portfolio.closedPositions;
+        if (list.isEmpty()) {
+            winRateLbl.setText("—");
+            totalPnlLbl.setText("—");
+            bestTradeLbl.setText("—");
+            worstTradeLbl.setText("—");
+            avgPnlLbl.setText("—");
+            String neutral = "-fx-text-fill: #8b949e; -fx-font-size: 12px; -fx-font-weight: bold;";
+            winRateLbl.setStyle(neutral);
+            totalPnlLbl.setStyle(neutral);
+            bestTradeLbl.setStyle(neutral);
+            worstTradeLbl.setStyle(neutral);
+            avgPnlLbl.setStyle(neutral);
+            return;
+        }
+
+        long wins = list.stream().filter(p -> p.realizedPnl() > 0).count();
+        double winRate = (double) wins / list.size() * 100.0;
+        double totalPnl = list.stream().mapToDouble(ClosedPosition::realizedPnl).sum();
+        double best = list.stream().mapToDouble(ClosedPosition::realizedPnl).max().orElse(0);
+        double worst = list.stream().mapToDouble(ClosedPosition::realizedPnl).min().orElse(0);
+        double avg = list.stream().mapToDouble(ClosedPosition::realizedPnl).average().orElse(0);
+
+        winRateLbl.setText(String.format("%.1f%%", winRate));
+        applyPnlStyle(totalPnlLbl, totalPnl, true);
+        applyPnlStyle(bestTradeLbl, best, true);
+        applyPnlStyle(worstTradeLbl, worst, true);
+        applyPnlStyle(avgPnlLbl, avg, true);
+
+        // Win rate: green if >= 50%, red otherwise
+        String wrColor = winRate >= 50 ? "#3fb950" : "#f85149";
+        winRateLbl.setStyle("-fx-text-fill: " + wrColor + "; -fx-font-size: 12px; -fx-font-weight: bold;");
+    }
+
+    private void applyPnlStyle(Label label, double value, boolean withDollar) {
+        String sign = value >= 0 ? "+" : "";
+        label.setText(sign + "$" + String.format("%,.2f", value));
+        String color = value >= 0 ? "#3fb950" : "#f85149";
+        label.setStyle("-fx-text-fill: " + color + "; -fx-font-size: 12px; -fx-font-weight: bold;");
     }
 
     private void adjustVolume(double delta) {
