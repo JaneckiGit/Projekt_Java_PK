@@ -234,15 +234,42 @@
 .tp-field { -fx-border-color: #3fb950; }
 
 .positions-list {
-    -fx-background-color: transparent;
+    -fx-background-color: #161b22;
     -fx-border-width: 0;
+    -fx-background-insets: 0;
+    -fx-padding: 4 0;
+}
+.positions-list .list-cell {
+    -fx-background-color: transparent;
+    -fx-padding: 3 8;
+    -fx-border-width: 0;
+}
+.positions-list .list-cell:filled {
+    -fx-background-color: transparent;
+}
+.positions-list .list-cell:filled:selected {
+    -fx-background-color: transparent;
+}
+.positions-list .list-cell:filled:hover {
+    -fx-background-color: #21262d22;
+}
+.positions-list .list-cell:empty {
+    -fx-background-color: transparent;
+}
+.positions-list .scroll-bar:horizontal {
+    -fx-pref-height: 0;
+    -fx-max-height: 0;
+    -fx-opacity: 0;
 }
 .position-cell {
     -fx-background-color: #1c2128;
     -fx-background-radius: 6;
+    -fx-border-color: #30363d;
+    -fx-border-width: 1;
     -fx-border-radius: 6;
     -fx-padding: 8 10;
     -fx-spacing: 4;
+    -fx-min-width: 0;
 }
 .pos-symbol {
     -fx-text-fill: #e6edf3;

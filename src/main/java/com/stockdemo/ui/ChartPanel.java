@@ -33,6 +33,16 @@ public class ChartPanel extends BorderPane {
         IDLE, SELECTING_SL, SELECTING_TP
     }
 
+    // ── Viewport (pan & zoom) ───────────────────────────────
+    private int viewCandleCount = 0;   // 0 = auto (show all)
+    private double viewOffset = 0.0;   // how many candles are hidden on the right
+    private boolean panning = false;
+    private double panStartX = -1;
+    private double panStartY = -1;
+    private double panStartOffset = 0.0;
+    private double panStartPriceOffset = 0.0;
+    private double priceOffset = 0.0;
+
     private static final Color BG = Color.web("#0d1117");
     private static final Color GRID = Color.web("#21262d");
     private static final Color AXIS_TEXT = Color.web("#8b949e");
@@ -227,10 +237,36 @@ public class ChartPanel extends BorderPane {
         canvas.widthProperty().addListener(e -> redraw());
         canvas.heightProperty().addListener(e -> redraw());
 
+        // ── Zoom (scroll wheel) ────────────────────────────────
+        canvas.setOnScroll(e -> {
+            if (candles.isEmpty()) return;
+            int n = candles.size();
+            int current = viewCandleCount <= 0 ? n : viewCandleCount;
+            int delta = (int) Math.max(1, current * 0.1);
+            if (e.getDeltaY() > 0) {
+                // Zoom in – show fewer candles
+                current = Math.max(10, current - delta);
+            } else {
+                // Zoom out – show more candles
+                current = Math.min(n, current + delta);
+            }
+            viewCandleCount = current;
+            // Clamp offset so we don't scroll past the data
+            double maxOff = Math.max(0.0, n - viewCandleCount);
+            viewOffset = Math.max(0.0, Math.min(viewOffset, maxOff));
+            redraw();
+        });
+
         canvas.setOnMouseMoved(e -> {
             crossX = e.getX();
             crossY = e.getY();
             redraw();
+        });
+        canvas.setOnMouseClicked(e -> {
+            if (e.getClickCount() == 2) {
+                priceOffset = 0.0;
+                redraw();
+            }
         });
         canvas.setOnMouseExited(e -> {
             crossX = -1;
@@ -239,6 +275,15 @@ public class ChartPanel extends BorderPane {
         });
         canvas.setOnMousePressed(e -> {
             this.requestFocus(); // Dla klawisza ESC
+
+            // Middle button always pans
+            if (e.isMiddleButtonDown()) {
+                panning = true;
+                panStartX = e.getX();
+                panStartOffset = viewOffset;
+                canvas.setCursor(Cursor.CLOSED_HAND);
+                return;
+            }
 
             // --- Narzędzia rysowania (tylko w trybie IDLE, gdy wybrane jest jakieś narzędzie) ---
             if (state == ChartState.IDLE && activeTool != DrawingTool.NONE) {
@@ -281,10 +326,44 @@ public class ChartPanel extends BorderPane {
                 draggingPendingTP = true;
                 return;
             }
+
+            // Left-click on background starts panning (when cursor tool is active)
+            if (activeTool == DrawingTool.NONE && state == ChartState.IDLE) {
+                panning = true;
+                panStartX = e.getX();
+                panStartY = e.getY();
+                panStartOffset = viewOffset;
+                panStartPriceOffset = priceOffset;
+                canvas.setCursor(Cursor.CLOSED_HAND);
+            }
         });
         canvas.setOnMouseDragged(e -> {
             crossX = e.getX();
             crossY = e.getY();
+
+            if (panning) {
+                double cW = canvas.getWidth() - PAD_LEFT - PAD_RIGHT;
+                double cH = getChartAreaH(canvas.getHeight());
+                int visCount = getVisibleCandleCount();
+                
+                double totalW = cW / getEffectiveN();
+                double candleDelta = (e.getX() - panStartX) / totalW;
+                double maxOff = Math.max(0.0, candles.size() - visCount);
+                viewOffset = Math.max(0.0, Math.min(maxOff, panStartOffset + candleDelta));
+
+                double currentPriceSpan = maxPrice - minPrice;
+                double priceDelta = (e.getY() - panStartY) / cH * currentPriceSpan;
+                double targetOffset = panStartPriceOffset + priceDelta;
+                
+                // Limit the vertical offset to 30% of the visible price span
+                // so the chart never completely disappears off screen
+                double limit = currentPriceSpan * 0.3;
+                priceOffset = Math.max(-limit, Math.min(limit, targetOffset));
+
+                redraw();
+                return;
+            }
+
             double price = yToPrice(e.getY());
 
             if (draggedPosSL != null) {
@@ -301,6 +380,16 @@ public class ChartPanel extends BorderPane {
             redraw();
         });
         canvas.setOnMouseReleased(e -> {
+            if (panning) {
+                panning = false;
+                if (activeTool != DrawingTool.NONE) {
+                    canvas.setCursor(Cursor.CROSSHAIR);
+                } else if (state != ChartState.IDLE) {
+                    canvas.setCursor(Cursor.CROSSHAIR);
+                } else {
+                    canvas.setCursor(Cursor.DEFAULT);
+                }
+            }
             draggingPendingSL = false;
             draggingPendingTP = false;
             draggedPosSL = null;
@@ -531,6 +620,10 @@ public class ChartPanel extends BorderPane {
         drawings.clear();
         drawStartCandleIdx = -1;
         drawStartPrice = -1;
+        // Reset viewport on new instrument/range
+        viewCandleCount = 0;
+        viewOffset = 0.0;
+        priceOffset = 0.0;
         loadingLbl.setVisible(true);
         marketData.loadCandles(currentInstrument, activeRange, data -> {
             this.candles = data;
@@ -557,14 +650,36 @@ public class ChartPanel extends BorderPane {
 
     // ===================== Metody pomocnicze do współrzędnych =====================
 
+    /** Zwraca liczbę widocznych świec z uwzględnieniem viewCandleCount */
+    private int getVisibleCandleCount() {
+        if (viewCandleCount <= 0 || viewCandleCount >= candles.size()) return candles.size();
+        return viewCandleCount;
+    }
+
+    /** Indeks pierwszej widocznej świecy */
+    private int getFirstVisibleIndex() {
+        int n = candles.size();
+        int vis = getVisibleCandleCount();
+        return Math.max(0, (int) Math.floor(n - vis - viewOffset));
+    }
+
+    /** Indeks za ostatnią widoczną świecą (exclusive) */
+    private int getLastVisibleIndex() {
+        int first = getFirstVisibleIndex();
+        return Math.min(candles.size(), first + getVisibleCandleCount() + 2);
+    }
+
     /** Zwraca wysokość obszaru wykresu (bez uwzględnienia panelu RSI) */
     private double getChartAreaH(double totalH) {
         double available = totalH - PAD_TOP - PAD_BOT;
         return showRSI ? available * 0.70 : available;
     }
 
-    /** Candle layout parameters â€” same formula as drawCandles/drawLine */
+    /** Candle layout parameters — respects viewport */
     private double getEffectiveN() {
+        if (viewCandleCount > 0 && viewCandleCount < candles.size()) {
+            return Math.max(getVisibleCandleCount(), 1.0);
+        }
         return Math.max(candles.size(), 50.0);
     }
 
@@ -572,25 +687,20 @@ public class ChartPanel extends BorderPane {
         return cW / getEffectiveN();
     }
 
-    private double getStartX(double cX, double cW) {
-        int n = candles.size();
-        double totalW = getTotalW(cW);
-        return cX + cW - (n * totalW);
-    }
-
-    /** Convert candle index to pixel X â€” uses startX + (i + 0.5) * totalW */
+    /** Convert candle index (within visible range) to pixel X */
     private double candleIndexToX(int idx, double cX, double cW) {
         double totalW = getTotalW(cW);
-        double startX = getStartX(cX, cW);
-        return startX + (idx + 0.5) * totalW;
+        int n = candles.size();
+        return cX + cW - (n - 1 - idx - viewOffset + 0.5) * totalW;
     }
 
-    /** Convert pixel X to candle index â€” exact inverse of candleIndexToX */
+    /** Convert pixel X to global candle index */
     private int xToCandleIndex(double x, double cX, double cW) {
         double totalW = getTotalW(cW);
-        double startX = getStartX(cX, cW);
-        int idx = (int) Math.round((x - startX) / totalW - 0.5);
-        return Math.max(0, Math.min(candles.size() - 1, idx));
+        int n = candles.size();
+        double rawIdx = n - 0.5 - viewOffset - (cX + cW - x) / totalW;
+        int idx = (int) Math.round(rawIdx);
+        return Math.max(0, Math.min(n - 1, idx));
     }
 
     private double priceToYInArea(double price, double areaY, double areaH) {
@@ -632,19 +742,36 @@ public class ChartPanel extends BorderPane {
             return;
         }
 
-        minPrice = candles.stream().mapToDouble(Candle::low).min().orElse(0);
-        maxPrice = candles.stream().mapToDouble(Candle::high).max().orElse(1);
+        // Compute min/max price only for visible candle range
+        int firstVis = getFirstVisibleIndex();
+        int lastVis = getLastVisibleIndex();
+        minPrice = Double.MAX_VALUE;
+        maxPrice = Double.MIN_VALUE;
+        for (int i = firstVis; i < lastVis; i++) {
+            Candle c = candles.get(i);
+            if (c.low() < minPrice) minPrice = c.low();
+            if (c.high() > maxPrice) maxPrice = c.high();
+        }
+        if (minPrice == Double.MAX_VALUE) { minPrice = 0; maxPrice = 1; }
+        double baseSpan = maxPrice - minPrice;
+        if (baseSpan == 0) baseSpan = 1;
+        minPrice -= baseSpan * 0.05;
+        maxPrice += baseSpan * 0.05;
+
+        // Aplikuj przesunięcie wertykalne
+        minPrice += priceOffset;
+        maxPrice += priceOffset;
         double priceSpan = maxPrice - minPrice;
-        if (priceSpan == 0)
-            priceSpan = 1;
-        minPrice -= priceSpan * 0.05;
-        maxPrice += priceSpan * 0.05;
-        priceSpan = maxPrice - minPrice;
 
         double cX = PAD_LEFT;
         double cY = PAD_TOP;
         double cW = W - PAD_LEFT - PAD_RIGHT;
         double cH = getChartAreaH(H);
+
+        gc.save();
+        gc.beginPath();
+        gc.rect(cX, cY, cW, cH);
+        gc.clip();
 
         drawGrid(gc, cX, cY, cW, cH, priceSpan);
         if (showCandles)
@@ -656,13 +783,14 @@ public class ChartPanel extends BorderPane {
         if (showMA20) drawMA(gc, cX, cY, cW, cH, 20, MA20_COLOR);
         if (showMA50) drawMA(gc, cX, cY, cW, cH, 50, MA50_COLOR);
 
-
         drawPositions(gc, cX, cY, cW, cH);
         drawPendingLines(gc, cX, cY, cW, cH);
 
         // Narysowane obiekty
         drawDrawings(gc, cX, cY, cW, cH);
         drawTempDrawing(gc, cX, cY, cW, cH);
+
+        gc.restore();
         
         drawCrosshairAndSelection(gc, cX, cY, cW, cH, W, H);
         drawAxisLabels(gc, cX, cY, cW, cH, W, priceSpan);
@@ -693,14 +821,14 @@ public class ChartPanel extends BorderPane {
     // ===================== Świece / Linia =====================
 
     private void drawCandles(GraphicsContext gc, double cX, double cY, double cW, double cH) {
-        int n = candles.size();
+        int firstVis = getFirstVisibleIndex();
+        int lastVis = getLastVisibleIndex();
         double totalW = getTotalW(cW);
         double bodyW = Math.max(1, totalW * 0.6);
-        double startX = getStartX(cX, cW);
 
-        for (int i = 0; i < n; i++) {
+        for (int i = firstVis; i < lastVis; i++) {
             Candle c = candles.get(i);
-            double cx = startX + (i + 0.5) * totalW;
+            double cx = candleIndexToX(i, cX, cW);
             double oY = priceToYInArea(c.open(), cY, cH);
             double cY2 = priceToYInArea(c.close(), cY, cH);
             double hY = priceToYInArea(c.high(), cY, cH);
@@ -719,22 +847,24 @@ public class ChartPanel extends BorderPane {
     }
 
     private void drawLine(GraphicsContext gc, double cX, double cY, double cW, double cH) {
-        int n = candles.size();
-        if (n < 2)
+        int firstVis = getFirstVisibleIndex();
+        int lastVis = getLastVisibleIndex();
+        if (lastVis - firstVis < 2)
             return;
-        double totalW = getTotalW(cW);
-        double startX = getStartX(cX, cW);
 
         gc.setStroke(LINE_COLOR);
         gc.setLineWidth(1.5);
         gc.beginPath();
-        for (int i = 0; i < n; i++) {
-            double x = startX + (i + 0.5) * totalW;
+        boolean first = true;
+        for (int i = firstVis; i < lastVis; i++) {
+            double x = candleIndexToX(i, cX, cW);
             double y = priceToYInArea(candles.get(i).close(), cY, cH);
-            if (i == 0)
+            if (first) {
                 gc.moveTo(x, y);
-            else
+                first = false;
+            } else {
                 gc.lineTo(x, y);
+            }
         }
         gc.stroke();
     }
@@ -745,8 +875,8 @@ public class ChartPanel extends BorderPane {
         int n = candles.size();
         if (n < period) return;
 
-        double totalW = getTotalW(cW);
-        double startX = getStartX(cX, cW);
+        int firstVis = getFirstVisibleIndex();
+        int lastVis = getLastVisibleIndex();
 
         gc.setStroke(color);
         gc.setLineWidth(1.5);
@@ -762,15 +892,20 @@ public class ChartPanel extends BorderPane {
 
         for (int i = period - 1; i < n; i++) {
             sum += candles.get(i).close();
-            double ma = sum / period;
-            double x = startX + (i + 0.5) * totalW;
-            double y = priceToYInArea(ma, cY, cH);
+            // Only draw points that fall within the visible range
+            if (i >= firstVis && i < lastVis) {
+                double ma = sum / period;
+                double x = candleIndexToX(i, cX, cW);
+                double y = priceToYInArea(ma, cY, cH);
 
-            if (!started) {
-                gc.moveTo(x, y);
-                started = true;
-            } else {
-                gc.lineTo(x, y);
+                if (!started) {
+                    gc.moveTo(x, y);
+                    started = true;
+                } else {
+                    gc.lineTo(x, y);
+                }
+            } else if (i >= lastVis) {
+                break;
             }
 
             sum -= candles.get(i - period + 1).close();
@@ -870,29 +1005,36 @@ public class ChartPanel extends BorderPane {
 
         gc.setLineDashes();
 
+        gc.save();
+        gc.beginPath();
+        gc.rect(cX, rsiY, cW, rsiH);
+        gc.clip();
+
         // Linia wskaźnika RSI
         double[] rsi = computeRSI(14);
         int n = candles.size();
-        if (n <= 14) return;
+        if (n > 14) {
+            int firstVis = getFirstVisibleIndex();
+            int lastVis = getLastVisibleIndex();
 
-        double totalW = getTotalW(cW);
-        double startX = getStartX(cX, cW);
-
-        gc.setStroke(Color.WHITE);
-        gc.setLineWidth(1.5);
-        gc.beginPath();
-        boolean started = false;
-        for (int i = 14; i < n; i++) {
-            double x = startX + (i + 0.5) * totalW;
-            double y = rsiY + rsiH * (1 - rsi[i] / 100.0);
-            if (!started) {
-                gc.moveTo(x, y);
-                started = true;
-            } else {
-                gc.lineTo(x, y);
+            gc.setStroke(Color.WHITE);
+            gc.setLineWidth(1.5);
+            gc.beginPath();
+            boolean started = false;
+            for (int i = Math.max(14, firstVis); i < lastVis; i++) {
+                double x = candleIndexToX(i, cX, cW);
+                double y = rsiY + rsiH * (1 - rsi[i] / 100.0);
+                if (!started) {
+                    gc.moveTo(x, y);
+                    started = true;
+                } else {
+                    gc.lineTo(x, y);
+                }
             }
+            gc.stroke();
         }
-        gc.stroke();
+        
+        gc.restore();
 
         // Podpis osi dla wartości RSI
         gc.setFill(AXIS_TEXT);
@@ -1123,11 +1265,11 @@ public class ChartPanel extends BorderPane {
 
         if (candles.isEmpty())
             return;
-        int n = candles.size();
-        int step = Math.max(1, n / 6);
+        int firstVis = getFirstVisibleIndex();
+        int lastVis = getLastVisibleIndex();
+        int vis = lastVis - firstVis;
+        int step = Math.max(1, vis / 6);
         DateTimeFormatter fmt = DateTimeFormatter.ofPattern("MM/dd").withZone(ZoneId.systemDefault());
-        double totalW = getTotalW(cW);
-        double startX = getStartX(cX, cW);
 
         // Gdy widoczny jest RSI, rysuj etykiety z datą poniżej panelu RSI
         double dateLabelsY = cY + cH + 20;
@@ -1136,8 +1278,8 @@ public class ChartPanel extends BorderPane {
             dateLabelsY = cY + cH + 10 + rsiH + 16;
         }
 
-        for (int i = 0; i < n; i += step) {
-            double x = startX + (i + 0.5) * totalW;
+        for (int i = firstVis; i < lastVis; i += step) {
+            double x = candleIndexToX(i, cX, cW);
             String label = fmt.format(Instant.ofEpochSecond(candles.get(i).timestamp()));
             gc.fillText(label, x - 15, dateLabelsY);
         }

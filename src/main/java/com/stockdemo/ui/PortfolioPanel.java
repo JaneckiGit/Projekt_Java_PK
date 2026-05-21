@@ -269,11 +269,15 @@ public class PortfolioPanel extends VBox {
         positionsList.setItems(portfolio.openPositions);
         positionsList.getStyleClass().add("positions-list");
         positionsList.setCellFactory(lv -> new PositionCell());
+        positionsList.setMinHeight(120);
+        positionsList.setPrefHeight(200);
         VBox.setVgrow(positionsList, Priority.ALWAYS);
         
         historyList.setItems(portfolio.closedPositions);
         historyList.getStyleClass().add("positions-list");
         historyList.setCellFactory(lv -> new ClosedPositionCell());
+        historyList.setMinHeight(120);
+        historyList.setPrefHeight(200);
         VBox.setVgrow(historyList, Priority.ALWAYS);
         
         historyList.setVisible(false);
@@ -410,16 +414,25 @@ public class PortfolioPanel extends VBox {
             symLabel.getStyleClass().add("pos-symbol");
             pnlLabel.getStyleClass().add("pos-pnl-positive");
             closeBtn.getStyleClass().add("btn-close-pos");
-            infoLabel.setStyle("-fx-text-fill: #8b949e; -fx-font-size: 11px;");
+            infoLabel.setStyle("-fx-text-fill: #8b949e; -fx-font-size: 10px;");
+            infoLabel.setMaxWidth(Double.MAX_VALUE);
+            infoLabel.setWrapText(true);
             dirLabel.setStyle("-fx-font-size: 11px; -fx-font-weight: 700;");
 
             Region sp = new Region();
             HBox.setHgrow(sp, Priority.ALWAYS);
             top.getChildren().addAll(dirLabel, symLabel, sp, pnlLabel);
-            bottom.getChildren().addAll(infoLabel, sp, closeBtn);
+            top.setMinWidth(0);
+            Region sp2 = new Region();
+            HBox.setHgrow(sp2, Priority.ALWAYS);
+            bottom.getChildren().addAll(infoLabel, sp2, closeBtn);
+            bottom.setMinWidth(0);
+            HBox.setHgrow(infoLabel, Priority.ALWAYS);
             root.getChildren().addAll(top, bottom);
             root.getStyleClass().add("position-cell");
             root.setPadding(new Insets(8, 10, 8, 10));
+            root.setMinWidth(0);
+            root.setMaxWidth(Double.MAX_VALUE);
 
             closeBtn.setOnAction(e -> {
                 Position pos = getItem();
@@ -453,7 +466,7 @@ public class PortfolioPanel extends VBox {
             pnlLabel.getStyleClass().removeAll("pos-pnl-positive", "pos-pnl-negative");
             pnlLabel.getStyleClass().add(pnl >= 0 ? "pos-pnl-positive" : "pos-pnl-negative");
 
-            infoLabel.setText(String.format(java.util.Locale.US, "%.4f @ %.2f  SL:%.2f  TP:%.2f",
+            infoLabel.setText(String.format(java.util.Locale.US, "%.4f @ %.2f\nSL:%.2f  TP:%.2f",
                     pos.getQuantity(), pos.getEntryPrice(),
                     pos.getStopLoss(), pos.getTakeProfit()));
 
@@ -477,21 +490,28 @@ public class PortfolioPanel extends VBox {
         ClosedPositionCell() {
             symLabel.getStyleClass().add("pos-symbol");
             pnlLabel.getStyleClass().add("pos-pnl-positive");
-            infoLabel.setStyle("-fx-text-fill: #8b949e; -fx-font-size: 11px;");
+            infoLabel.setStyle("-fx-text-fill: #8b949e; -fx-font-size: 10px;");
+            infoLabel.setMaxWidth(Double.MAX_VALUE);
+            infoLabel.setWrapText(true);
             dateLabel.setStyle("-fx-text-fill: #8b949e; -fx-font-size: 10px;");
             dirLabel.setStyle("-fx-font-size: 11px; -fx-font-weight: 700;");
 
             Region sp = new Region();
             HBox.setHgrow(sp, Priority.ALWAYS);
             top.getChildren().addAll(dirLabel, symLabel, sp, pnlLabel);
+            top.setMinWidth(0);
             
             Region sp2 = new Region();
             HBox.setHgrow(sp2, Priority.ALWAYS);
+            HBox.setHgrow(infoLabel, Priority.ALWAYS);
             bottom.getChildren().addAll(infoLabel, sp2, dateLabel);
+            bottom.setMinWidth(0);
             
             root.getChildren().addAll(top, bottom);
             root.getStyleClass().add("position-cell");
             root.setPadding(new Insets(8, 10, 8, 10));
+            root.setMinWidth(0);
+            root.setMaxWidth(Double.MAX_VALUE);
         }
 
         @Override
@@ -512,7 +532,7 @@ public class PortfolioPanel extends VBox {
             pnlLabel.getStyleClass().removeAll("pos-pnl-positive", "pos-pnl-negative");
             pnlLabel.getStyleClass().add(pnl >= 0 ? "pos-pnl-positive" : "pos-pnl-negative");
 
-            infoLabel.setText(String.format(java.util.Locale.US, "%.4f | Open: %.2f | Close: %.2f",
+            infoLabel.setText(String.format(java.util.Locale.US, "%.4f | Open: %.2f\nClose: %.2f",
                     pos.quantity(), pos.entryPrice(), pos.closePrice()));
                     
             DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd-MM-yy HH:mm");
