@@ -21,10 +21,17 @@ public class MainApp {
             scene.getStylesheets().add(
                     getClass().getResource("/styles.css").toExternalForm());
 
+            com.stockdemo.service.PortfolioPersistence.load(root.getPortfolio(), root.getMarketData());
+
             stage.setTitle("Stock Demo — Trading Platform");
             stage.setScene(scene);
             stage.setMinWidth(900);
             stage.setMinHeight(600);
+
+            stage.setOnCloseRequest(e -> {
+                com.stockdemo.service.PortfolioPersistence.save(root.getPortfolio());
+            });
+
             stage.show();
         }
     }

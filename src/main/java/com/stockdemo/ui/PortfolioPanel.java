@@ -125,7 +125,15 @@ public class PortfolioPanel extends VBox {
         equityLabel.getStyleClass().add("equity-value");
         pnlLabel.setStyle("-fx-text-fill: #8b949e; -fx-font-size: 12px;");
 
-        VBox section = new VBox(6, sectionTitle, balanceLabel, equityLabel, pnlLabel);
+        Button resetBtn = new Button("Reset Portfolio");
+        resetBtn.setStyle("-fx-background-color: transparent; -fx-text-fill: #58a6ff; -fx-cursor: hand; -fx-padding: 4 0 0 0; -fx-font-size: 12px;");
+        resetBtn.setOnAction(e -> {
+            com.stockdemo.service.PortfolioPersistence.reset(portfolio);
+            refresh();
+            showToast("Reset", "Portfel zresetowany do $100,000.00");
+        });
+
+        VBox section = new VBox(6, sectionTitle, balanceLabel, equityLabel, pnlLabel, resetBtn);
         section.getStyleClass().add("portfolio-section");
         content.getChildren().add(section);
     }

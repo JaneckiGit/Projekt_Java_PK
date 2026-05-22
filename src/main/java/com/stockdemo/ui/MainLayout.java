@@ -16,6 +16,9 @@ public class MainLayout extends BorderPane {
     private final PortfolioPanel portfolioPanel;
     private final WatchlistPanel watchlistPanel;
 
+    public PortfolioService getPortfolio() { return portfolio; }
+    public MarketDataService getMarketData() { return marketData; }
+
     public MainLayout() {
         this.marketData = new MarketDataService();
         this.portfolio = new PortfolioService();
