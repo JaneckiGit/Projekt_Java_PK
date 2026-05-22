@@ -32,20 +32,21 @@ public class PortfolioService {
 
     //Otwiera nową pozycję na rynku.
 
-    public void openPosition(Instrument instrument, boolean isLong, double quantity, double sl, double tp) {
-        if (!isLong) return; // Spot market only allows buying
+    public boolean openPosition(Instrument instrument, boolean isLong, double quantity, double sl, double tp) {
+        if (!isLong) return false; // Spot market only allows buying
 
         double currentPrice = instrument.getAsk();
-        if (currentPrice <= 0) return;
+        if (currentPrice <= 0) return false;
 
         double cost = quantity * currentPrice;
-        if (balance.get() < cost) return; // Insufficient funds
+        if (balance.get() < cost) return false; // Insufficient funds
 
         balance.set(balance.get() - cost); // Deduct Cash
 
         Position pos = new Position(instrument, true, quantity, currentPrice, sl, tp);
         openPositions.add(pos);
         refreshPortfolio();
+        return true;
     }
 
     //Zamyka pozycję i rozlicza zysk/stratę do głównego salda.
