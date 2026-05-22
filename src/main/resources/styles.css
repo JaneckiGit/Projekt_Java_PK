@@ -324,6 +324,7 @@
     -fx-border-color: #30363d;
     -fx-border-width: 0 1 0 0;
     -fx-padding: 10 12 10 12;
+    -fx-min-width: 70px;
 }
 .xtb-vol-btn {
     -fx-background-color: transparent;

@@ -4,10 +4,17 @@ import com.stockdemo.model.Instrument;
 import com.stockdemo.model.Position;
 import com.stockdemo.model.ClosedPosition;
 import com.stockdemo.service.PortfolioService;
+import javafx.animation.KeyFrame;
+import javafx.animation.KeyValue;
+import javafx.animation.Timeline;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Parent;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Rectangle;
+import javafx.util.Duration;
 import java.time.format.DateTimeFormatter;
 
 public class PortfolioPanel extends VBox {
@@ -147,7 +154,7 @@ public class PortfolioPanel extends VBox {
         HBox volRight = new HBox();
         volRight.setAlignment(Pos.CENTER);
         HBox.setHgrow(volRight, Priority.ALWAYS);
-        Button minusBtn = new Button("—");
+        Button minusBtn = new Button("\u2212");
         minusBtn.getStyleClass().add("xtb-vol-btn");
         minusBtn.setOnAction(e -> adjustVolume(-0.01));
 
@@ -233,9 +240,9 @@ public class PortfolioPanel extends VBox {
             }
             if (applied) {
                 refresh();
-                showAlert("Updated", "Zaktualizowano SL/TP dla otwartej pozycji.");
+                showToast("Updated", "SL/TP has been updated for the open position.");
             } else {
-                showAlert("No Position", "Nie masz otwartej pozycji na tym instrumencie.");
+                showToast("No Position", "You have no open position on this instrument.");
             }
         });
 
@@ -420,14 +427,14 @@ public class PortfolioPanel extends VBox {
 
     private void placeOrder(boolean isLong) {
         if (selectedInstrument == null) {
-            showAlert("No instrument", "Wybierz najpierw walor z listy po lewej stronie.");
+            showToast("No instrument", "Please select an instrument from the list on the left.");
             return;
         }
         double qty;
         try {
             qty = Double.parseDouble(qtyField.getText().replace(",", "."));
         } catch (NumberFormatException e) {
-            showAlert("Invalid quantity", "Wprowadź prawidłowy wolumen.");
+            showToast("Invalid quantity", "Please enter a valid volume.");
             return;
         }
         double sl = parseDouble(slField.getText());
@@ -442,7 +449,11 @@ public class PortfolioPanel extends VBox {
             if (tp > 0 && tp >= currentPrice) tp = 0.0;
         }
 
-        portfolio.openPosition(selectedInstrument, isLong, qty, sl, tp);
+        boolean success = portfolio.openPosition(selectedInstrument, isLong, qty, sl, tp);
+        if (!success) {
+            showToast("Insufficient funds", "You don't have enough balance to place this order.");
+            return;
+        }
         
         //Reset formularza
         slField.setText("");
@@ -467,12 +478,114 @@ public class PortfolioPanel extends VBox {
         return String.format(java.util.Locale.US, "%.2f", p);
     }
 
-    private void showAlert(String title, String msg) {
-        Alert alert = new Alert(Alert.AlertType.WARNING, msg, ButtonType.OK);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.getDialogPane().setStyle("-fx-background-color: #161b22;");
-        alert.showAndWait();
+    private void showToast(String title, String msg) {
+        // Find the root StackPane of the scene
+        StackPane overlay = findRootStackPane();
+        if (overlay == null) return;
+
+        // --- Toast container ---
+        VBox toast = new VBox(6);
+        toast.setPadding(new Insets(14, 16, 10, 16));
+        toast.setMaxWidth(320);
+        toast.setMinWidth(260);
+        toast.setStyle(
+            "-fx-background-color: #161b22;" +
+            "-fx-border-color: #30363d;" +
+            "-fx-border-width: 1;" +
+            "-fx-border-radius: 8;" +
+            "-fx-background-radius: 8;" +
+            "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.45), 16, 0, 0, 4);"
+        );
+        toast.setMouseTransparent(false);
+
+        // --- Header: title + close button ---
+        HBox header = new HBox();
+        header.setAlignment(Pos.CENTER_LEFT);
+        Label titleLabel = new Label(title);
+        titleLabel.setStyle("-fx-text-fill: #e6edf3; -fx-font-size: 13px; -fx-font-weight: bold;");
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+        Button closeBtn = new Button("✕");
+        closeBtn.setStyle(
+            "-fx-background-color: transparent; -fx-text-fill: #8b949e;" +
+            "-fx-font-size: 13px; -fx-padding: 0 0 0 8; -fx-cursor: hand;"
+        );
+        closeBtn.setOnMouseEntered(e -> closeBtn.setStyle(
+            "-fx-background-color: transparent; -fx-text-fill: #f85149;" +
+            "-fx-font-size: 13px; -fx-padding: 0 0 0 8; -fx-cursor: hand;"
+        ));
+        closeBtn.setOnMouseExited(e -> closeBtn.setStyle(
+            "-fx-background-color: transparent; -fx-text-fill: #8b949e;" +
+            "-fx-font-size: 13px; -fx-padding: 0 0 0 8; -fx-cursor: hand;"
+        ));
+        header.getChildren().addAll(titleLabel, spacer, closeBtn);
+
+        // --- Message body ---
+        Label msgLabel = new Label(msg);
+        msgLabel.setStyle("-fx-text-fill: #8b949e; -fx-font-size: 12px;");
+        msgLabel.setWrapText(true);
+
+        // --- Progress bar (countdown indicator) ---
+        double barWidth = 288;
+        Rectangle progressBar = new Rectangle(barWidth, 3);
+        progressBar.setArcWidth(3);
+        progressBar.setArcHeight(3);
+        progressBar.setFill(Color.web("#58a6ff"));
+        VBox.setMargin(progressBar, new Insets(4, 0, 0, 0));
+
+        toast.getChildren().addAll(header, msgLabel, progressBar);
+
+        // --- Wrapper to stack toasts from bottom-right ---
+        // Use the overlay's existing toast container or create one
+        VBox toastContainer = findOrCreateToastContainer(overlay);
+        toastContainer.getChildren().add(0, toast); // newest on bottom visually = index 0 pushes up
+
+        // --- Auto-dismiss animation ---
+        Timeline countdown = new Timeline(
+            new KeyFrame(Duration.ZERO, new KeyValue(progressBar.widthProperty(), barWidth)),
+            new KeyFrame(Duration.seconds(4), new KeyValue(progressBar.widthProperty(), 0))
+        );
+        countdown.setOnFinished(e -> removeToast(toast, toastContainer, overlay));
+        countdown.play();
+
+        // --- Manual close ---
+        closeBtn.setOnAction(e -> {
+            countdown.stop();
+            removeToast(toast, toastContainer, overlay);
+        });
+    }
+
+    private StackPane findRootStackPane() {
+        if (getScene() == null) return null;
+        Parent root = getScene().getRoot();
+        if (root instanceof StackPane) return (StackPane) root;
+        return null;
+    }
+
+    private VBox findOrCreateToastContainer(StackPane overlay) {
+        // Look for existing toast container
+        for (javafx.scene.Node child : overlay.getChildren()) {
+            if (child instanceof VBox && "toast-container".equals(child.getId())) {
+                return (VBox) child;
+            }
+        }
+        // Create a new one
+        VBox container = new VBox(8);
+        container.setId("toast-container");
+        container.setAlignment(Pos.BOTTOM_RIGHT);
+        container.setPadding(new Insets(0, 24, 24, 0));
+        container.setPickOnBounds(false); // allow clicks to pass through empty area
+        container.setMouseTransparent(false);
+        overlay.getChildren().add(container);
+        StackPane.setAlignment(container, Pos.BOTTOM_RIGHT);
+        return container;
+    }
+
+    private void removeToast(VBox toast, VBox container, StackPane overlay) {
+        container.getChildren().remove(toast);
+        if (container.getChildren().isEmpty()) {
+            overlay.getChildren().remove(container);
+        }
     }
 
     //Komórka listy aktywnych pozycji
