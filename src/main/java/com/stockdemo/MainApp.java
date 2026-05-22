@@ -16,6 +16,7 @@ public class MainApp {
         public void start(Stage stage) {
             MainLayout root = new MainLayout();
             StackPane appRoot = new StackPane(root);
+            root.setAppRoot(appRoot);
 
             Scene scene = new Scene(appRoot, 1400, 820);
             scene.getStylesheets().add(

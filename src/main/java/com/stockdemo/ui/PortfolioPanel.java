@@ -62,7 +62,6 @@ public class PortfolioPanel extends VBox {
         buildAccountSection();
         buildUnifiedTradeForm();
         buildPositionsAndHistorySection();
-        buildStatsSection();
         
         //Przekaż listę otwartych pozycji do ChartPanel
         chartPanel.setOpenPositions(portfolio.openPositions);
@@ -77,9 +76,12 @@ public class PortfolioPanel extends VBox {
         portfolio.closedPositions.addListener((javafx.collections.ListChangeListener<ClosedPosition>) c -> refresh());
         refresh();
 
-        // Owinięcie zawartości w ScrollPane żeby nie ucinało przy zmniejszaniu okna
+        // Owinięcie zawartości w ScrollPane żeby nie ucinało przy zmniejszaniu okna.
+        // setFitToHeight(true) sprawia, że content rozciąga się do pełnej wysokości,
+        // dzięki czemu sekcja z pozycjami (z VGrow ALWAYS) wypełnia puste miejsce na dole.
         ScrollPane scrollPane = new ScrollPane(content);
         scrollPane.setFitToWidth(true);
+        scrollPane.setFitToHeight(true);
         scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         scrollPane.setStyle("-fx-background-color: transparent; -fx-background: transparent;");
         VBox.setVgrow(scrollPane, Priority.ALWAYS);
@@ -333,31 +335,15 @@ public class PortfolioPanel extends VBox {
         content.getChildren().add(section);
     }
 
-    private void buildStatsSection() {
-        Label sectionTitle = new Label("STATISTICS");
-        sectionTitle.getStyleClass().add("section-title");
+    // Sekcja STATISTICS została przeniesiona do osobnego modala (MainLayout#buildStatisticsContent).
+    // Etykiety pozostają jako pola, refreshStats() nadal je aktualizuje.
 
-        VBox section = new VBox(6, sectionTitle,
-                buildStatRow("Win Rate", winRateLbl),
-                buildStatRow("Total P&L", totalPnlLbl),
-                buildStatRow("Best Trade", bestTradeLbl),
-                buildStatRow("Worst Trade", worstTradeLbl),
-                buildStatRow("Avg P&L", avgPnlLbl)
-        );
-        section.getStyleClass().add("portfolio-section");
-        content.getChildren().add(section);
-    }
-
-    private HBox buildStatRow(String labelText, Label valueLabel) {
-        Label key = new Label(labelText);
-        key.setStyle("-fx-text-fill: #8b949e; -fx-font-size: 12px;");
-        valueLabel.setStyle("-fx-text-fill: #8b949e; -fx-font-size: 12px; -fx-font-weight: bold;");
-        Region spacer = new Region();
-        HBox.setHgrow(spacer, Priority.ALWAYS);
-        HBox row = new HBox();
-        row.getChildren().setAll(key, spacer, valueLabel);
-        return row;
-    }
+    // === Gettery do etykiet statystyk (używane przez modal Statistics) ===
+    public Label getLabelWinRate()    { return winRateLbl; }
+    public Label getLabelTotalPnl()   { return totalPnlLbl; }
+    public Label getLabelBestTrade()  { return bestTradeLbl; }
+    public Label getLabelWorstTrade() { return worstTradeLbl; }
+    public Label getLabelAvgPnl()     { return avgPnlLbl; }
 
     private void refreshStats() {
         var list = portfolio.closedPositions;

@@ -120,6 +120,10 @@ public class ChartPanel extends BorderPane {
     // Przycisk MA50 do włączania/wyłączania w zależności od ilości wczytanych świec
     private ToggleButton btnMA50;
 
+    // Przycisk menu (⋮) i jego zewnętrzny handler
+    private Button menuBtn;
+    private Runnable onMenuRequested;
+
     public ChartPanel(MarketDataService marketData) {
         this.marketData = marketData;
         this.setId("chartPanel");
@@ -216,10 +220,21 @@ public class ChartPanel extends BorderPane {
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
+        // === Przycisk menu (po prawej stronie toolbara) ===
+        Region menuSpacer = new Region();
+        HBox.setHgrow(menuSpacer, Priority.ALWAYS);
+
+        menuBtn = new Button("\u2630");
+        menuBtn.getStyleClass().add("chart-type-btn");
+        menuBtn.setTooltip(new Tooltip("Menu"));
+        menuBtn.setOnAction(e -> {
+            if (onMenuRequested != null) onMenuRequested.run();
+        });
+
         HBox toolbar = new HBox(12, symbolLabel, priceLabel, changeLabel, spacer, ranges, new Separator(),
                 new HBox(4, btnLine, btnCandle), new Separator(),
                 new HBox(4, btnMA20, btnMA50), new Separator(),
-                btnRSI);
+                btnRSI, menuSpacer, menuBtn);
         toolbar.setId("chartToolbar");
         toolbar.setAlignment(Pos.CENTER_LEFT);
 
@@ -593,6 +608,16 @@ public class ChartPanel extends BorderPane {
     public void setOpenPositions(List<Position> positions) {
         this.openPositions = positions;
         redraw();
+    }
+
+    /** Ustawia handler wywoływany po kliknięciu przycisku menu (⋮) w toolbarze. */
+    public void setOnMenuRequested(Runnable handler) {
+        this.onMenuRequested = handler;
+    }
+
+    /** Zwraca przycisk menu w toolbarze (potrzebne np. do pozycjonowania mini-menu). */
+    public Button getMenuButton() {
+        return menuBtn;
     }
 
     public void refreshPrice(Instrument inst) {
