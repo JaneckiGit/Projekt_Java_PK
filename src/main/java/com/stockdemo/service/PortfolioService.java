@@ -7,6 +7,9 @@ import javafx.beans.property.SimpleDoubleProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 
+import javax.sound.sampled.*;
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.time.LocalDateTime;
@@ -15,6 +18,44 @@ import com.stockdemo.model.ClosedPosition;
 //Zarządza portfelem inwestycyjnym (balans, pozycje, equity).
 
 public class PortfolioService {
+
+    private static final byte[] ALERT_WAV_BYTES;
+
+    static {
+        byte[] bytes = null;
+        try {
+            InputStream is = PortfolioService.class.getResourceAsStream("/alert.wav");
+            if (is != null) {
+                bytes = is.readAllBytes();
+                is.close();
+            } else {
+                System.err.println("alert.wav not found on classpath \u2013 SL/TP sound disabled.");
+            }
+        } catch (Exception e) {
+            System.err.println("Failed to load alert.wav: " + e.getMessage());
+        }
+        ALERT_WAV_BYTES = bytes;
+    }
+
+    private static void playAlertSound() {
+        if (ALERT_WAV_BYTES == null) return;
+        new Thread(() -> {
+            try {
+                AudioInputStream ais = AudioSystem.getAudioInputStream(
+                        new ByteArrayInputStream(ALERT_WAV_BYTES));
+                Clip clip = AudioSystem.getClip();
+                clip.open(ais);
+                clip.addLineListener(event -> {
+                    if (event.getType() == LineEvent.Type.STOP) {
+                        clip.close();
+                    }
+                });
+                clip.start();
+            } catch (Exception e) {
+                System.err.println("Failed to play alert.wav: " + e.getMessage());
+            }
+        }, "alert-sound").start();
+    }
 
     private final DoubleProperty balance = new SimpleDoubleProperty(100_000.0);
     private final DoubleProperty equity = new SimpleDoubleProperty(100_000.0);
@@ -51,6 +92,11 @@ public class PortfolioService {
 
     //Zamyka pozycję i rozlicza zysk/stratę do głównego salda.
     public void closePosition(Position pos) {
+        closePosition(pos, false);
+    }
+
+    //Zamyka pozycję. Gdy isAutoClose == true (SL/TP), odtwarza dźwięk alertu.
+    public void closePosition(Position pos, boolean isAutoClose) {
         if (!openPositions.contains(pos)) return;
         
         pos.updatePnl(); // Upewnij się, że PnL jest aktualny
@@ -73,6 +119,12 @@ public class PortfolioService {
         closedPositions.add(0, closedPos); // Add to beginning of history
         
         openPositions.remove(pos);
+
+        // Odtwórz dźwięk alertu tylko przy automatycznym zamknięciu (SL/TP)
+        if (isAutoClose) {
+            playAlertSound();
+        }
+
         refreshPortfolio();
     }
 
@@ -95,7 +147,7 @@ public class PortfolioService {
         }
 
         // Zamknij pozycje, które osiągnęły SL/TP
-        toClose.forEach(this::closePosition);
+        toClose.forEach(pos -> closePosition(pos, true));
 
         equity.set(balance.get() + totalHoldingsValue);
     }
