@@ -624,3 +624,36 @@
 .menu-popup-item:hover {
     -fx-background-color: #30363d;
 }
+
+/* ── Settings gear button ────────────────────────────── */
+.settings-gear-btn {
+    -fx-background-color: #21262d;
+    -fx-text-fill: #8b949e;
+    -fx-border-radius: 5;
+    -fx-background-radius: 5;
+    -fx-padding: 4 10;
+    -fx-font-size: 14px;
+    -fx-cursor: hand;
+}
+
+.settings-gear-btn:hover {
+    -fx-background-color: #30363d;
+    -fx-text-fill: #e6edf3;
+}
+
+/* ── Settings sidebar panel ──────────────────────────── */
+.settings-panel {
+    -fx-background-color: #161b22;
+    -fx-border-color: #21262d;
+    -fx-border-width: 0 0 0 1;
+}
+
+.settings-item {
+    -fx-background-color: transparent;
+    -fx-background-radius: 8;
+    -fx-cursor: hand;
+}
+
+.settings-item:hover {
+    -fx-background-color: #21262d;
+}

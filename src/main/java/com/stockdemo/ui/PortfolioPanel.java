@@ -54,7 +54,9 @@ public class PortfolioPanel extends VBox {
     private final VBox content = new VBox(0);
 
     private final Button menuBtn = new Button("\u2630");
+    private final Button settingsBtn = new Button("\u2699");
     private Runnable onMenuRequested;
+    private Runnable onSettingsRequested;
 
     public PortfolioPanel(PortfolioService portfolio, ChartPanel chartPanel) {
         this.portfolio = portfolio;
@@ -132,6 +134,11 @@ public class PortfolioPanel extends VBox {
         this.onMenuRequested = handler;
     }
 
+    /** Ustawia handler wywoływany po kliknięciu przycisku ustawień (⚙). */
+    public void setOnSettingsRequested(Runnable handler) {
+        this.onSettingsRequested = handler;
+    }
+
     private void buildAccountSection() {
         Label sectionTitle = new Label("ACCOUNT");
         sectionTitle.getStyleClass().add("section-title");
@@ -143,24 +150,23 @@ public class PortfolioPanel extends VBox {
             if (onMenuRequested != null) onMenuRequested.run();
         });
 
+        // Przycisk ustawień (⚙) obok menu
+        settingsBtn.getStyleClass().add("settings-gear-btn");
+        settingsBtn.setTooltip(new javafx.scene.control.Tooltip("Settings"));
+        settingsBtn.setOnAction(e -> {
+            if (onSettingsRequested != null) onSettingsRequested.run();
+        });
+
         Region headerSpacer = new Region();
         HBox.setHgrow(headerSpacer, Priority.ALWAYS);
-        HBox header = new HBox(8, sectionTitle, headerSpacer, menuBtn);
+        HBox header = new HBox(6, sectionTitle, headerSpacer, menuBtn, settingsBtn);
         header.setAlignment(Pos.CENTER_LEFT);
 
         balanceLabel.getStyleClass().add("balance-value");
         equityLabel.getStyleClass().add("equity-value");
         pnlLabel.setStyle("-fx-text-fill: #8b949e; -fx-font-size: 12px;");
 
-        Button resetBtn = new Button("Reset Portfolio");
-        resetBtn.setStyle("-fx-background-color: transparent; -fx-text-fill: #58a6ff; -fx-cursor: hand; -fx-padding: 4 0 0 0; -fx-font-size: 12px;");
-        resetBtn.setOnAction(e -> {
-            com.stockdemo.service.PortfolioPersistence.reset(portfolio);
-            refresh();
-            showToast("Reset", "Portfolio has been reset to $100,000.00");
-        });
-
-        VBox section = new VBox(6, header, balanceLabel, equityLabel, pnlLabel, resetBtn);
+        VBox section = new VBox(6, header, balanceLabel, equityLabel, pnlLabel);
         section.getStyleClass().add("portfolio-section");
         content.getChildren().add(section);
     }
