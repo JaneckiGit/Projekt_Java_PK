@@ -643,17 +643,131 @@
 
 /* ── Settings sidebar panel ──────────────────────────── */
 .settings-panel {
-    -fx-background-color: #161b22;
+    -fx-background-color: linear-gradient(to bottom, #161b22, #0d1117);
     -fx-border-color: #21262d;
     -fx-border-width: 0 0 0 1;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.5), 15, 0, -4, 0);
 }
 
 .settings-item {
     -fx-background-color: transparent;
-    -fx-background-radius: 8;
+    -fx-background-radius: 6;
+    -fx-border-color: transparent transparent transparent transparent;
+    -fx-border-width: 0 0 0 3;
     -fx-cursor: hand;
 }
 
 .settings-item:hover {
-    -fx-background-color: #21262d;
+    -fx-background-color: rgba(255, 255, 255, 0.04);
+    -fx-border-color: transparent transparent transparent #1f6feb;
+}
+
+.settings-section-title {
+    -fx-text-fill: #58a6ff;
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-letter-spacing: 1px;
+    -fx-padding: 12 12 4 12;
+}
+
+/* ── Preferences UI Premium Cards ─────────────────────── */
+.preferences-row-card {
+    -fx-background-color: #161b22;
+    -fx-border-color: #21262d;
+    -fx-border-width: 1;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-transition: all 0.2s ease-in-out;
+}
+
+.preferences-row-card:hover {
+    -fx-border-color: #30363d;
+    -fx-background-color: #1c2128;
+}
+
+/* ── Premium Gradient Buttons ─────────────────────────── */
+.btn-gradient-green {
+    -fx-background-color: linear-gradient(to right, #238636, #2ea44f);
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-padding: 12 16;
+    -fx-background-radius: 6;
+    -fx-cursor: hand;
+    -fx-font-size: 14px;
+    -fx-alignment: center;
+    -fx-effect: dropshadow(gaussian, rgba(35,134,54,0.2), 8, 0, 0, 2);
+}
+
+.btn-gradient-green:hover {
+    -fx-background-color: linear-gradient(to right, #2ea44f, #3fb950);
+    -fx-effect: dropshadow(gaussian, rgba(63,185,80,0.35), 12, 0, 0, 3);
+}
+
+.btn-gradient-green:pressed {
+    -fx-scale-x: 0.98;
+    -fx-scale-y: 0.98;
+}
+
+.apply-balance-btn {
+    -fx-background-color: linear-gradient(to right, #1f6feb, #388bfd);
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-padding: 12 16;
+    -fx-background-radius: 6;
+    -fx-cursor: hand;
+    -fx-font-size: 14px;
+    -fx-alignment: center;
+    -fx-effect: dropshadow(gaussian, rgba(31,111,235,0.2), 8, 0, 0, 2);
+}
+
+.apply-balance-btn:hover {
+    -fx-background-color: linear-gradient(to right, #388bfd, #58a6ff);
+    -fx-effect: dropshadow(gaussian, rgba(88,166,255,0.35), 12, 0, 0, 3);
+}
+
+.apply-balance-btn:pressed {
+    -fx-scale-x: 0.98;
+    -fx-scale-y: 0.98;
+}
+
+/* ── Modal Close Button Premium ───────────────────────── */
+.modal-close-btn {
+    -fx-background-color: rgba(255, 255, 255, 0.04);
+    -fx-text-fill: #8b949e;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-cursor: hand;
+    -fx-background-radius: 50%;
+    -fx-min-width: 24px;
+    -fx-max-width: 24px;
+    -fx-min-height: 24px;
+    -fx-max-height: 24px;
+    -fx-alignment: center;
+    -fx-padding: 0;
+}
+
+.modal-close-btn:hover {
+    -fx-background-color: rgba(248, 81, 73, 0.15);
+    -fx-text-fill: #f85149;
+}
+
+.form-section-header {
+    -fx-text-fill: #58a6ff;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-padding: 6 0 4 0;
+}
+
+/* ── Progress Indicator / Spinner ─────────────────────── */
+.loading-spinner {
+    -fx-progress-color: #58a6ff;
+    -fx-background-color: transparent;
+}
+
+.loading-spinner .indicator {
+    -fx-background-color: transparent;
+}
+
+.loading-spinner .progress {
+    -fx-background-color: #58a6ff;
 }

@@ -27,6 +27,11 @@ import javafx.scene.control.TextField;
 import javafx.scene.layout.*;
 import javafx.stage.Window;
 import javafx.util.Duration;
+import javafx.scene.shape.SVGPath;
+import javafx.scene.shape.Rectangle;
+import javafx.scene.shape.Circle;
+import javafx.scene.paint.Color;
+import javafx.scene.Cursor;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -121,7 +126,7 @@ public class MainLayout extends BorderPane {
     private void openSettings() {
         if (appRoot == null || settingsWrapper != null) return;
 
-        double panelWidth = 300;
+        double panelWidth = 320;
 
         VBox panel = new VBox(0);
         panel.getStyleClass().add("settings-panel");
@@ -130,82 +135,125 @@ public class MainLayout extends BorderPane {
         panel.setMaxWidth(panelWidth);
 
         // Header
-        Label title = new Label("⚙  Settings");
+        Label title = new Label("Settings");
         title.setStyle("-fx-text-fill: #e6edf3; -fx-font-size: 16px; -fx-font-weight: 700;");
+        
+        SVGPath gearPath = new SVGPath();
+        gearPath.setContent("M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z");
+        gearPath.setFill(Color.web("#58a6ff"));
+        gearPath.setStroke(Color.TRANSPARENT);
+        gearPath.setScaleX(0.55);
+        gearPath.setScaleY(0.55);
+        
+        StackPane headerIcon = new StackPane(gearPath);
+        headerIcon.setMinSize(28, 28);
+        headerIcon.setPrefSize(28, 28);
+        headerIcon.setMaxSize(28, 28);
+        headerIcon.setStyle(
+            "-fx-background-color: rgba(88,166,255,0.12); " +
+            "-fx-background-radius: 6;"
+        );
+        headerIcon.setAlignment(Pos.CENTER);
+
         Button closeBtn = new Button("✕");
         closeBtn.getStyleClass().add("modal-close-btn");
         closeBtn.setOnAction(e -> closeSettings());
+        
         Region sp = new Region();
         HBox.setHgrow(sp, Priority.ALWAYS);
-        HBox header = new HBox(8, title, sp, closeBtn);
+        
+        HBox header = new HBox(8, headerIcon, title, sp, closeBtn);
         header.setAlignment(Pos.CENTER_LEFT);
         header.setPadding(new Insets(16, 16, 12, 16));
         header.setStyle("-fx-border-color: transparent transparent #21262d transparent; -fx-border-width: 0 0 1 0;");
 
         // Items container
-        VBox items = new VBox(2);
+        VBox items = new VBox(4);
         items.setPadding(new Insets(8, 8, 8, 8));
 
         // Section: Export
         Label exportSection = new Label("EXPORT");
-        exportSection.getStyleClass().add("section-title");
-        exportSection.setPadding(new Insets(8, 8, 4, 8));
+        exportSection.getStyleClass().add("settings-section-title");
 
         items.getChildren().addAll(
                 exportSection,
-                makeSettingsItem("📋  Export Positions History", "Download open & closed positions in one CSV", () -> {
-                    Window w = getScene() != null ? getScene().getWindow() : null;
-                    ReportService.exportAllPositionsCSV(portfolio.openPositions, portfolio.closedPositions, w);
-                }),
-                makeSettingsItem("📄  Download PIT-8C (PDF)", "Fill form and download tax PDF", () -> {
-                    closeSettings();
-                    new ModalOverlay("PIT-8C Tax Form Details", buildPit8cFormContent()).showOn(appRoot);
-                })
+                makeSettingsItem(
+                    "Export Positions History",
+                    "Download open & closed positions in CSV format",
+                    "M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zM13 3.5L18.5 9H13V3.5zM5 19V4h7v6h6v9H5z",
+                    "#58a6ff", "rgba(88,166,255,0.1)",
+                    () -> {
+                        Window w = getScene() != null ? getScene().getWindow() : null;
+                        ReportService.exportAllPositionsCSV(portfolio.openPositions, portfolio.closedPositions, w);
+                    }
+                ),
+                makeSettingsItem(
+                    "Download PIT-8C (PDF)",
+                    "Fill form and download tax statement PDF",
+                    "M12 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z M11 3.5L16.5 9H11V3.5z M7 12h10v2H7zm0 4h7v2H7z",
+                    "#8957e5", "rgba(137,87,229,0.1)",
+                    () -> {
+                        closeSettings();
+                        new ModalOverlay("PIT-8C Tax Form Details", buildPit8cFormContent()).showOn(appRoot);
+                    }
+                )
         );
 
-        // Separator
-        Separator sep1 = new Separator();
-        sep1.setStyle("-fx-padding: 4 8;");
-        items.getChildren().add(sep1);
-
         // Section: Account
-        Label accountSection = new Label("ACCOUNT");
-        accountSection.getStyleClass().add("section-title");
-        accountSection.setPadding(new Insets(8, 8, 4, 8));
+        Label accountSection = new Label("ACCOUNT MANAGEMENT");
+        accountSection.getStyleClass().add("settings-section-title");
 
         items.getChildren().addAll(
                 accountSection,
-                makeSettingsItem("🔄  Reset Balance", "Reset portfolio to $100,000.00", () -> {
-                    closeSettings();
-                    com.stockdemo.service.PortfolioPersistence.reset(portfolio);
-                    portfolioPanel.refresh();
-                }),
-                makeSettingsItem("💰  Set New Balance", "Change account value", () -> {
-                    closeSettings();
-                    new ModalOverlay("Set Balance", buildBalanceContent(portfolio)).showOn(appRoot);
-                })
+                makeSettingsItem(
+                    "Reset Portfolio Balance",
+                    "Reset portfolio value back to starting $100,000.00",
+                    "M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z",
+                    "#f0883e", "rgba(240,136,62,0.1)",
+                    () -> {
+                        closeSettings();
+                        com.stockdemo.service.PortfolioPersistence.reset(portfolio);
+                        portfolioPanel.refresh();
+                    }
+                ),
+                makeSettingsItem(
+                    "Set Custom Balance",
+                    "Manually adjust your primary trading balance",
+                    "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h-1c-.55 0-1-.45-1-1v-2c0-.55.45-1 1-1h3v-1H9.5c-.28 0-.5-.22-.5-.5s.22-.5.5-.5H11V7h2v2h1c.55 0 1 .45 1 1v2c0 .55-.45 1-1 1h-3v1h3.5c.28 0 .5.22.5.5s-.22.5-.5.5H13v2z",
+                    "#3fb950", "rgba(63,185,80,0.1)",
+                    () -> {
+                        closeSettings();
+                        new ModalOverlay("Set Balance", buildBalanceContent(portfolio)).showOn(appRoot);
+                    }
+                )
         );
 
-        // Separator
-        Separator sep2 = new Separator();
-        sep2.setStyle("-fx-padding: 4 8;");
-        items.getChildren().add(sep2);
-
         // Section: App
-        Label appSection = new Label("APPLICATION");
-        appSection.getStyleClass().add("section-title");
-        appSection.setPadding(new Insets(8, 8, 4, 8));
+        Label appSection = new Label("APPLICATION SETTINGS");
+        appSection.getStyleClass().add("settings-section-title");
 
         items.getChildren().addAll(
                 appSection,
-                makeSettingsItem("⚙  Preferences", "Sound alerts, dark mode, about", () -> {
-                    closeSettings();
-                    new ModalOverlay("Settings", buildSettingsContent()).showOn(appRoot);
-                }),
-                makeSettingsItem("🚪  Exit Application", "Save and quit", () -> {
-                    com.stockdemo.service.PortfolioPersistence.save(portfolio);
-                    Platform.exit();
-                })
+                makeSettingsItem(
+                    "System Preferences",
+                    "Adjust sound alerts, toggle dark mode, about info",
+                    "M3 17v2h6v-2H3z M9 15H7v5h2v-5z M13 7v2h10V7H13z M19 5h-2v4h2V5z M3 12v2h18v-2H3z M15 10h-2v4h2v-4z",
+                    "#bc8cff", "rgba(188,140,255,0.1)",
+                    () -> {
+                        closeSettings();
+                        new ModalOverlay("Settings", buildSettingsContent()).showOn(appRoot);
+                    }
+                ),
+                makeSettingsItem(
+                    "Exit Application",
+                    "Save current portfolio state and close window",
+                    "M10.09 15.59L11.5 17l5-5-5-5-1.41 1.41L12.67 11H3v2h9.67l-2.58 2.59zM19 3H5c-1.11 0-2 .9-2 2v4h2V5h14v14H5v-4H3v4c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z",
+                    "#f85149", "rgba(248,81,73,0.1)",
+                    () -> {
+                        com.stockdemo.service.PortfolioPersistence.save(portfolio);
+                        Platform.exit();
+                    }
+                )
         );
 
         ScrollPane scroll = new ScrollPane(items);
@@ -269,7 +317,7 @@ public class MainLayout extends BorderPane {
         }
 
         TranslateTransition slide = new TranslateTransition(Duration.millis(180), panel);
-        slide.setToX(300);
+        slide.setToX(320);
         slide.setInterpolator(Interpolator.EASE_IN);
 
         FadeTransition fade = new FadeTransition(Duration.millis(180), wrapper);
@@ -281,15 +329,22 @@ public class MainLayout extends BorderPane {
         fade.play();
     }
 
-    private VBox makeSettingsItem(String label, String description, Runnable action) {
+    private HBox makeSettingsItem(String label, String description, String pathContent, String iconColor, String iconBg, Runnable action) {
+        StackPane iconContainer = createIconContainer(pathContent, iconColor, iconBg);
+
         Label lbl = new Label(label);
         lbl.setStyle("-fx-text-fill: #e6edf3; -fx-font-size: 13px; -fx-font-weight: 600;");
 
         Label desc = new Label(description);
         desc.setStyle("-fx-text-fill: #8b949e; -fx-font-size: 11px;");
 
-        VBox item = new VBox(2, lbl, desc);
+        VBox textContainer = new VBox(2, lbl, desc);
+        textContainer.setAlignment(Pos.CENTER_LEFT);
+        HBox.setHgrow(textContainer, Priority.ALWAYS);
+
+        HBox item = new HBox(12, iconContainer, textContainer);
         item.getStyleClass().add("settings-item");
+        item.setAlignment(Pos.CENTER_LEFT);
         item.setPadding(new Insets(10, 12, 10, 12));
         item.setOnMouseClicked(e -> action.run());
         return item;
@@ -420,38 +475,74 @@ public class MainLayout extends BorderPane {
 
     /** Modal: ustawienia (preferencje aplikacji) */
     private Node buildSettingsContent() {
-        VBox box = new VBox(14);
+        VBox box = new VBox(16);
         box.setPadding(new Insets(20));
         box.setFillWidth(true);
+        box.setStyle("-fx-background-color: #0d1117;");
+
+        Label generalTitle = new Label("SYSTEM PREFERENCES");
+        generalTitle.getStyleClass().add("settings-section-title");
+        generalTitle.setStyle("-fx-text-fill: #58a6ff; -fx-font-size: 11px; -fx-font-weight: bold; -fx-padding: 0 0 4 0;");
 
         HBox sound = buildToggleRow(
-                "Sound alerts",
-                "Play alert.wav when SL/TP is triggered",
+                "Sound Alerts",
+                "Play alert.wav when Stop Loss or Take Profit is triggered",
                 PREFS.getBoolean(PREF_SOUND_ALERTS, true),
                 v -> PREFS.putBoolean(PREF_SOUND_ALERTS, v)
         );
 
         HBox dark = buildToggleRow(
-                "Dark mode",
-                "Use dark UI theme (placeholder)",
+                "Dark Mode",
+                "Use high-contrast sleek dark UI theme styling",
                 PREFS.getBoolean(PREF_DARK_MODE, true),
                 v -> PREFS.putBoolean(PREF_DARK_MODE, v)
         );
 
-        Separator sep = new Separator();
-        sep.setStyle("-fx-padding: 6 0 6 0;");
+        VBox generalSection = new VBox(8, generalTitle, sound, dark);
 
-        Label aboutTitle = new Label("ABOUT");
-        aboutTitle.getStyleClass().add("section-title");
-        aboutTitle.setStyle("-fx-text-fill: #8b949e; -fx-font-size: 10px; -fx-font-weight: 700; -fx-padding: 4 0 4 0;");
+        Label aboutTitle = new Label("PLATFORM INFO");
+        aboutTitle.getStyleClass().add("settings-section-title");
+        aboutTitle.setStyle("-fx-text-fill: #58a6ff; -fx-font-size: 11px; -fx-font-weight: bold; -fx-padding: 0 0 4 0;");
 
-        Label appName = new Label("Stock Demo — Trading Platform");
-        appName.setStyle("-fx-text-fill: #e6edf3; -fx-font-size: 14px; -fx-font-weight: bold;");
+        VBox aboutCard = new VBox(10);
+        aboutCard.getStyleClass().add("preferences-row-card");
+        aboutCard.setPadding(new Insets(20));
+        aboutCard.setAlignment(Pos.CENTER);
 
-        Label version = new Label("Version 1.0.0");
-        version.setStyle("-fx-text-fill: #8b949e; -fx-font-size: 12px;");
+        // Stock chart logo
+        SVGPath logo = new SVGPath();
+        logo.setContent("M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-1 16H6c-.55 0-1-.45-1-1V6c0-.55.45-1 1-1h12c.55 0 1 .45 1 1v12c0 .55-.45 1-1 1z M15 13h-2v3h-2V9h-2v3H7V7h2v3h2V8h2v2h2v3z");
+        logo.setFill(Color.web("#3fb950"));
+        logo.setScaleX(1.8);
+        logo.setScaleY(1.8);
 
-        box.getChildren().addAll(sound, dark, sep, aboutTitle, appName, version);
+        Label appName = new Label("STOCK DEMO");
+        appName.setStyle("-fx-text-fill: #e6edf3; -fx-font-size: 16px; -fx-font-weight: 800; -fx-letter-spacing: 1px;");
+
+        Label desc = new Label("Advanced Trading Simulator Platform");
+        desc.setStyle("-fx-text-fill: #8b949e; -fx-font-size: 11px;");
+
+        Label versionChip = new Label("v1.0.0");
+        versionChip.setStyle(
+            "-fx-background-color: rgba(88,166,255,0.1); " +
+            "-fx-text-fill: #58a6ff; " +
+            "-fx-font-size: 10px; " +
+            "-fx-font-weight: bold; " +
+            "-fx-padding: 3 8; " +
+            "-fx-background-radius: 10; " +
+            "-fx-border-color: rgba(88,166,255,0.2); " +
+            "-fx-border-radius: 10; " +
+            "-fx-border-width: 1;"
+        );
+
+        Region aboutSpacer = new Region();
+        aboutSpacer.setMinHeight(8);
+        
+        aboutCard.getChildren().addAll(aboutSpacer, logo, appName, desc, versionChip);
+        
+        VBox aboutSection = new VBox(8, aboutTitle, aboutCard);
+
+        box.getChildren().addAll(generalSection, aboutSection);
         return box;
     }
 
@@ -467,59 +558,68 @@ public class MainLayout extends BorderPane {
         Region sp = new Region();
         HBox.setHgrow(sp, Priority.ALWAYS);
 
-        CheckBox toggle = new CheckBox();
-        toggle.setSelected(initial);
-        toggle.selectedProperty().addListener((o, oldV, newV) -> onChange.accept(newV));
+        ToggleSwitch toggle = new ToggleSwitch(initial);
+        toggle.setOnToggle(onChange);
 
         HBox row = new HBox(12, text, sp, toggle);
+        row.getStyleClass().add("preferences-row-card");
         row.setAlignment(Pos.CENTER_LEFT);
-        row.setPadding(new Insets(8, 4, 8, 4));
+        row.setPadding(new Insets(12, 16, 12, 16));
         return row;
     }
 
     /** Modal: ustawianie balansu */
     private Node buildBalanceContent(PortfolioService portfolio) {
-        VBox box = new VBox(12);
+        VBox box = new VBox(16);
         box.setPadding(new Insets(20));
         box.setFillWidth(true);
+        box.setStyle("-fx-background-color: #0d1117;");
 
-        Label info = new Label("Current balance: $" + String.format(Locale.US, "%,.2f", portfolio.getBalance()));
-        info.setStyle("-fx-text-fill: #8b949e; -fx-font-size: 12px;");
+        VBox currentCard = new VBox(6);
+        currentCard.getStyleClass().add("preferences-row-card");
+        currentCard.setPadding(new Insets(16));
+        currentCard.setAlignment(Pos.CENTER);
+        
+        Label currentTitle = new Label("CURRENT BALANCE");
+        currentTitle.setStyle("-fx-text-fill: #8b949e; -fx-font-size: 10px; -fx-font-weight: bold;");
+        
+        Label info = new Label("$" + String.format(Locale.US, "%,.2f", portfolio.getBalance()));
+        info.setStyle("-fx-text-fill: #3fb950; -fx-font-size: 24px; -fx-font-weight: 800;");
+        currentCard.getChildren().addAll(currentTitle, info);
 
-        Label fieldLbl = new Label("New balance ($)");
-        fieldLbl.setStyle("-fx-text-fill: #8b949e; -fx-font-size: 12px;");
+        Label fieldLbl = new Label("ENTER NEW ACCOUNT BALANCE ($)");
+        fieldLbl.setStyle("-fx-text-fill: #8b949e; -fx-font-size: 10px; -fx-font-weight: 700;");
 
         TextField field = new TextField(String.format(Locale.US, "%.2f", portfolio.getBalance()));
         field.getStyleClass().add("trade-field");
         field.setMaxWidth(Double.MAX_VALUE);
+        field.setStyle("-fx-font-size: 14px; -fx-padding: 10 12;");
 
-        Label quickLbl = new Label("Quick amounts");
-        quickLbl.setStyle("-fx-text-fill: #8b949e; -fx-font-size: 12px;");
+        Label quickLbl = new Label("QUICK AMOUNT PRESETS");
+        quickLbl.setStyle("-fx-text-fill: #8b949e; -fx-font-size: 10px; -fx-font-weight: 700;");
 
         HBox quick = new HBox(8);
         for (double v : new double[]{10_000, 50_000, 100_000, 250_000}) {
             Button b = new Button("$" + String.format(Locale.US, "%,.0f", v));
             b.getStyleClass().add("chart-type-btn");
             b.setMaxWidth(Double.MAX_VALUE);
+            b.setStyle("-fx-padding: 8 12; -fx-font-size: 12px; -fx-font-weight: 600; -fx-background-radius: 6;");
             HBox.setHgrow(b, Priority.ALWAYS);
             b.setOnAction(e -> field.setText(String.format(Locale.US, "%.2f", v)));
             quick.getChildren().add(b);
         }
 
-        Label warning = new Label("⚠ Setting a new balance will close all open positions");
-        warning.setStyle("-fx-text-fill: #f0883e; -fx-font-size: 12px; -fx-font-weight: bold;");
+        Label warning = new Label("⚠ Setting a new balance will automatically close all active positions");
+        warning.setStyle("-fx-text-fill: #f0883e; -fx-font-size: 11px; -fx-font-weight: bold; -fx-padding: 4 0;");
         boolean hasOpen = !portfolio.openPositions.isEmpty();
         warning.setVisible(hasOpen);
         warning.setManaged(hasOpen);
 
-        Button applyBtn = new Button("Apply");
+        Button applyBtn = new Button("Apply Balance Changes");
         applyBtn.setMaxWidth(Double.MAX_VALUE);
-        applyBtn.setStyle(
-                "-fx-background-color: #1f6feb; -fx-text-fill: white; -fx-font-weight: bold; " +
-                        "-fx-padding: 10 16; -fx-background-radius: 6; -fx-cursor: hand; -fx-font-size: 13px;"
-        );
+        applyBtn.getStyleClass().add("apply-balance-btn");
 
-        String fieldNormalStyle = "";
+        String fieldNormalStyle = "-fx-font-size: 14px; -fx-padding: 10 12;";
         Runnable validate = () -> {
             try {
                 double v = Double.parseDouble(field.getText().replace(",", "."));
@@ -527,7 +627,7 @@ public class MainLayout extends BorderPane {
                 field.setStyle(fieldNormalStyle);
                 applyBtn.setDisable(false);
             } catch (Exception ex) {
-                field.setStyle("-fx-border-color: #f85149; -fx-border-width: 1.5; -fx-border-radius: 6;");
+                field.setStyle(fieldNormalStyle + " -fx-border-color: #f85149; -fx-border-width: 1.5; -fx-border-radius: 6;");
                 applyBtn.setDisable(true);
             }
         };
@@ -557,7 +657,7 @@ public class MainLayout extends BorderPane {
             }
         });
 
-        box.getChildren().addAll(info, fieldLbl, field, quickLbl, quick, warning, applyBtn);
+        box.getChildren().addAll(currentCard, fieldLbl, field, quickLbl, quick, warning, applyBtn);
         return box;
     }
 
@@ -657,10 +757,7 @@ public class MainLayout extends BorderPane {
         // Dolny przycisk akcji
         Button generateBtn = new Button("Pobierz PIT-8C (PDF)");
         generateBtn.setMaxWidth(Double.MAX_VALUE);
-        generateBtn.setStyle(
-                "-fx-background-color: #238636; -fx-text-fill: white; -fx-font-weight: bold; " +
-                "-fx-padding: 12 16; -fx-background-radius: 6; -fx-cursor: hand; -fx-font-size: 14px;"
-        );
+        generateBtn.getStyleClass().add("btn-gradient-green");
         generateBtn.setOnAction(e -> {
             // Walidacja i zapis danych do pit8cData
             pit8cData.urzadSkarbowy = tfUrzad.getText().trim();
@@ -710,7 +807,7 @@ public class MainLayout extends BorderPane {
 
     private Label createFormSectionTitle(String text) {
         Label title = new Label(text);
-        title.setStyle("-fx-text-fill: #58a6ff; -fx-font-size: 11px; -fx-font-weight: bold; -fx-padding: 4 0;");
+        title.getStyleClass().add("form-section-header");
         return title;
     }
 
@@ -747,6 +844,86 @@ public class MainLayout extends BorderPane {
                 return;
             }
             n = n.getParent();
+        }
+    }
+
+    private StackPane createIconContainer(String pathContent, String iconColor, String bgColor) {
+        SVGPath path = new SVGPath();
+        path.setContent(pathContent);
+        path.setFill(Color.web(iconColor));
+        path.setStroke(Color.TRANSPARENT);
+        
+        path.setScaleX(0.85);
+        path.setScaleY(0.85);
+        
+        StackPane container = new StackPane(path);
+        container.setMinSize(28, 28);
+        container.setPrefSize(28, 28);
+        container.setMaxSize(28, 28);
+        container.setStyle(
+            "-fx-background-color: " + bgColor + "; " +
+            "-fx-background-radius: 6;"
+        );
+        container.setAlignment(Pos.CENTER);
+        return container;
+    }
+
+    public static class ToggleSwitch extends Pane {
+        private final Rectangle track;
+        private final Circle thumb;
+        private boolean selected;
+        private Consumer<Boolean> onToggleListener;
+
+        public ToggleSwitch(boolean initialValue) {
+            this.selected = initialValue;
+            setPrefSize(36, 20);
+            setMinSize(36, 20);
+            setMaxSize(36, 20);
+
+            track = new Rectangle(36, 20);
+            track.setArcWidth(20);
+            track.setArcHeight(20);
+            track.setFill(Color.web(selected ? "#1f6feb" : "#30363d"));
+            track.setStroke(Color.web("#444c56"));
+            track.setStrokeWidth(1);
+
+            thumb = new Circle(8);
+            thumb.setFill(Color.WHITE);
+            thumb.setCenterX(10);
+            thumb.setCenterY(10);
+            thumb.setTranslateX(selected ? 16 : 0);
+            thumb.setEffect(new javafx.scene.effect.DropShadow(3, Color.web("rgba(0,0,0,0.35)")));
+
+            getChildren().addAll(track, thumb);
+            setCursor(Cursor.HAND);
+
+            setOnMouseClicked(e -> {
+                setSelected(!selected);
+                if (onToggleListener != null) {
+                    onToggleListener.accept(selected);
+                }
+            });
+        }
+
+        public boolean isSelected() {
+            return selected;
+        }
+
+        public void setSelected(boolean value) {
+            if (this.selected == value) return;
+            this.selected = value;
+
+            TranslateTransition translate = new TranslateTransition(Duration.millis(120), thumb);
+            translate.setToX(selected ? 16 : 0);
+
+            javafx.animation.FillTransition fill = new javafx.animation.FillTransition(Duration.millis(120), track);
+            fill.setToValue(Color.web(selected ? "#1f6feb" : "#30363d"));
+
+            new javafx.animation.ParallelTransition(translate, fill).play();
+        }
+
+        public void setOnToggle(Consumer<Boolean> listener) {
+            this.onToggleListener = listener;
         }
     }
 }

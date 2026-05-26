@@ -14,6 +14,7 @@ import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
+import javafx.scene.shape.SVGPath;
 import javafx.util.Duration;
 import java.time.format.DateTimeFormatter;
 
@@ -54,7 +55,7 @@ public class PortfolioPanel extends VBox {
     private final VBox content = new VBox(0);
 
     private final Button menuBtn = new Button("\u2630");
-    private final Button settingsBtn = new Button("\u2699");
+    private final Button settingsBtn = new Button();
     private Runnable onMenuRequested;
     private Runnable onSettingsRequested;
 
@@ -151,11 +152,29 @@ public class PortfolioPanel extends VBox {
         });
 
         // Przycisk ustawień (⚙) obok menu
-        settingsBtn.getStyleClass().add("settings-gear-btn");
+        SVGPath gearPath = new SVGPath();
+        gearPath.setContent("M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z");
+        gearPath.setFill(Color.web("#8b949e"));
+        
+        // Wrap the SVGPath in a StackPane and give it a small size so it doesn't take up too much layout space.
+        StackPane iconContainer = new StackPane(gearPath);
+        iconContainer.setMinSize(14, 14);
+        iconContainer.setPrefSize(14, 14);
+        iconContainer.setMaxSize(14, 14);
+        
+        // Scale the SVGPath inside the small container to 0.55 (about 13x13 px)
+        gearPath.setScaleX(0.55);
+        gearPath.setScaleY(0.55);
+        
+        settingsBtn.setGraphic(iconContainer);
+        settingsBtn.getStyleClass().add("chart-type-btn");
         settingsBtn.setTooltip(new javafx.scene.control.Tooltip("Settings"));
         settingsBtn.setOnAction(e -> {
             if (onSettingsRequested != null) onSettingsRequested.run();
         });
+        
+        settingsBtn.setOnMouseEntered(e -> gearPath.setFill(Color.web("#e6edf3")));
+        settingsBtn.setOnMouseExited(e -> gearPath.setFill(Color.web("#8b949e")));
 
         Region headerSpacer = new Region();
         HBox.setHgrow(headerSpacer, Priority.ALWAYS);

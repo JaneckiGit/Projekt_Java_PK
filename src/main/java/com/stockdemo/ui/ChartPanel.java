@@ -115,7 +115,7 @@ public class ChartPanel extends BorderPane {
     private final Label symbolLabel = new Label("Select instrument");
     private final Label priceLabel = new Label("");
     private final Label changeLabel = new Label("");
-    private final Label loadingLbl = new Label("Loadingâ€¦");
+    private final ProgressIndicator loadingIndicator = new ProgressIndicator();
 
     // Drawing toolbar buttons â€” kept as field for active state styling
     private final List<Button> drawingBtns = new ArrayList<>();
@@ -258,11 +258,12 @@ public class ChartPanel extends BorderPane {
         // === Pasek narzędzi rysowania (lewy VBox) ===
         VBox drawingToolbar = buildDrawingToolbar();
 
-        StackPane canvasPane = new StackPane(canvas, loadingLbl);
+        StackPane canvasPane = new StackPane(canvas, loadingIndicator);
         canvasPane.setMinWidth(0);
         canvasPane.setMinHeight(0);
-        loadingLbl.getStyleClass().add("loading-label");
-        loadingLbl.setVisible(false);
+        loadingIndicator.setMaxSize(40, 40);
+        loadingIndicator.getStyleClass().add("loading-spinner");
+        loadingIndicator.setVisible(false);
 
         canvas.widthProperty().bind(canvasPane.widthProperty());
         canvas.heightProperty().bind(canvasPane.heightProperty());
@@ -674,10 +675,10 @@ public class ChartPanel extends BorderPane {
         viewCandleCount = 0;
         viewOffset = 0.0;
         priceOffset = 0.0;
-        loadingLbl.setVisible(true);
+        loadingIndicator.setVisible(true);
         marketData.loadCandles(currentInstrument, activeRange, data -> {
             this.candles = data;
-            loadingLbl.setVisible(false);
+            loadingIndicator.setVisible(false);
             updateMA50State();
             refreshPrice(currentInstrument);
             redraw();
