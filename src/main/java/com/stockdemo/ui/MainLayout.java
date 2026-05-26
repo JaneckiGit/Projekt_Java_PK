@@ -87,8 +87,8 @@ public class MainLayout extends BorderPane {
         this.setCenter(centerStack);
         this.setRight(portfolioPanel);
 
-        // Po zbudowaniu paneli — podłącz menu przycisk
-        chartPanel.setOnMenuRequested(this::showMenu);
+        // Po zbudowaniu paneli — podłącz menu przycisk (w PortfolioPanel)
+        portfolioPanel.setOnMenuRequested(this::showMenu);
     }
 
     // ===================== MINI-MENU =====================
@@ -135,11 +135,13 @@ public class MainLayout extends BorderPane {
         menu.layout();
         double menuWidth = menu.prefWidth(-1);
 
-        // Pozycjonuj menu pod przyciskiem (wyrównanie do prawej krawędzi przycisku)
-        Button menuBtn = chartPanel.getMenuButton();
+        // Pozycjonuj menu w prawym górnym rogu aplikacji (po prawej stronie panelu Account)
+        Button menuBtn = portfolioPanel.getMenuButton();
         Bounds btnBounds = menuBtn.localToScene(menuBtn.getBoundsInLocal());
-        double x = btnBounds.getMaxX() - menuWidth;
         double y = btnBounds.getMaxY() + 4;
+
+        double appWidth = appRoot.getWidth();
+        double x = appWidth - menuWidth - 8;
         if (x < 8) x = 8;
         menu.setLayoutX(x);
         menu.setLayoutY(y);

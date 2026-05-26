@@ -79,13 +79,13 @@ public class ChartPanel extends BorderPane {
     //Podgląd zlecenia oczekującego
     private double pendingSlPrice = 0;
     private double pendingTpPrice = 0;
-    private double pendingEntryPrice = 0; 
+    private double pendingEntryPrice = 0;
     private boolean showPendingPreview = false;
     private Runnable onPendingSlTpChanged;
 
     //Otwarte pozycje obecnego instrumentu
     private List<Position> openPositions = new ArrayList<>();
-    
+
     //Stan przeciągania
     private boolean draggingPendingSL = false;
     private boolean draggingPendingTP = false;
@@ -101,6 +101,9 @@ public class ChartPanel extends BorderPane {
 
     // === Przełącznik RSI ===
     private boolean showRSI = false;
+
+    // === Przełącznik MACD ===
+    private boolean showMACD = false;
 
     // === Narzędzia rysowania ===
     private DrawingTool activeTool = DrawingTool.NONE;
@@ -120,14 +123,11 @@ public class ChartPanel extends BorderPane {
     // Przycisk MA50 do włączania/wyłączania w zależności od ilości wczytanych świec
     private ToggleButton btnMA50;
 
-    // Przycisk menu (⋮) i jego zewnętrzny handler
-    private Button menuBtn;
-    private Runnable onMenuRequested;
 
     public ChartPanel(MarketDataService marketData) {
         this.marketData = marketData;
         this.setId("chartPanel");
-        
+
         //upewnienie sie ze panem moze otrzymac event na exc
         this.setFocusTraversable(true);
         this.setOnKeyPressed(e -> {
@@ -217,24 +217,41 @@ public class ChartPanel extends BorderPane {
             redraw();
         });
 
+        // === Przycisk przełączania MACD ===
+        ToggleButton btnMACD = new ToggleButton("MACD");
+        btnMACD.getStyleClass().add("rsi-toggle");
+        btnMACD.selectedProperty().addListener((o, old, sel) -> {
+            showMACD = sel;
+            btnMACD.getStyleClass().removeAll("rsi-toggle-active");
+            if (sel) btnMACD.getStyleClass().add("rsi-toggle-active");
+            redraw();
+        });
+
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
-        // === Przycisk menu (po prawej stronie toolbara) ===
-        Region menuSpacer = new Region();
-        HBox.setHgrow(menuSpacer, Priority.ALWAYS);
-
-        menuBtn = new Button("\u2630");
-        menuBtn.getStyleClass().add("chart-type-btn");
-        menuBtn.setTooltip(new Tooltip("Menu"));
-        menuBtn.setOnAction(e -> {
-            if (onMenuRequested != null) onMenuRequested.run();
-        });
+        // Zapobieganie obcinaniu tekstu przycisków w toolbarze
+        symbolLabel.setMinWidth(Region.USE_PREF_SIZE);
+        priceLabel.setMinWidth(Region.USE_PREF_SIZE);
+        changeLabel.setMinWidth(Region.USE_PREF_SIZE);
+        ranges.setMinWidth(Region.USE_PREF_SIZE);
+        HBox chartTypeBtns = new HBox(4, btnLine, btnCandle);
+        chartTypeBtns.setMinWidth(Region.USE_PREF_SIZE);
+        btnLine.setMinWidth(Region.USE_PREF_SIZE);
+        btnCandle.setMinWidth(Region.USE_PREF_SIZE);
+        HBox maBtns = new HBox(4, btnMA20, btnMA50);
+        maBtns.setMinWidth(Region.USE_PREF_SIZE);
+        btnMA20.setMinWidth(Region.USE_PREF_SIZE);
+        btnMA50.setMinWidth(Region.USE_PREF_SIZE);
+        HBox indicatorBtns = new HBox(4, btnRSI, btnMACD);
+        indicatorBtns.setMinWidth(Region.USE_PREF_SIZE);
+        btnRSI.setMinWidth(Region.USE_PREF_SIZE);
+        btnMACD.setMinWidth(Region.USE_PREF_SIZE);
 
         HBox toolbar = new HBox(12, symbolLabel, priceLabel, changeLabel, spacer, ranges, new Separator(),
-                new HBox(4, btnLine, btnCandle), new Separator(),
-                new HBox(4, btnMA20, btnMA50), new Separator(),
-                btnRSI, menuSpacer, menuBtn);
+                chartTypeBtns, new Separator(),
+                maBtns, new Separator(),
+                indicatorBtns);
         toolbar.setId("chartToolbar");
         toolbar.setAlignment(Pos.CENTER_LEFT);
 
@@ -305,7 +322,7 @@ public class ChartPanel extends BorderPane {
                 handleDrawingClick(e.getX(), e.getY());
                 return;
             }
-            
+
             if (state != ChartState.IDLE) {
                 double price = yToPrice(e.getY());
                 if (onPriceSelected != null) {
@@ -317,7 +334,7 @@ public class ChartPanel extends BorderPane {
 
             //Sprawdzenie trafień (czy kliknięto na istniejący element)
             double my = e.getY();
-            
+
             //sprawdz otwarte pozycje
             for (Position p : openPositions) {
                 if (p.getInstrument().equals(currentInstrument)) {
@@ -331,7 +348,7 @@ public class ChartPanel extends BorderPane {
                     }
                 }
             }
-            
+
             //sprawdz pozycje pending
             if (pendingSlPrice > 0 && Math.abs(my - priceToY(pendingSlPrice)) < DRAG_HIT) {
                 draggingPendingSL = true;
@@ -360,7 +377,7 @@ public class ChartPanel extends BorderPane {
                 double cW = canvas.getWidth() - PAD_LEFT - PAD_RIGHT;
                 double cH = getChartAreaH(canvas.getHeight());
                 int visCount = getVisibleCandleCount();
-                
+
                 double totalW = cW / getEffectiveN();
                 double candleDelta = (e.getX() - panStartX) / totalW;
                 double maxOff = Math.max(0.0, candles.size() - visCount);
@@ -369,7 +386,7 @@ public class ChartPanel extends BorderPane {
                 double currentPriceSpan = maxPrice - minPrice;
                 double priceDelta = (e.getY() - panStartY) / cH * currentPriceSpan;
                 double targetOffset = panStartPriceOffset + priceDelta;
-                
+
                 // Limit the vertical offset to 30% of the visible price span
                 // so the chart never completely disappears off screen
                 double limit = currentPriceSpan * 0.3;
@@ -427,11 +444,11 @@ public class ChartPanel extends BorderPane {
         toolbar.setPadding(new Insets(8, 4, 8, 4));
 
         String[][] tools = {
-            {"↖", "NONE", "Cursor (default)"},
-            {"╱", "TREND_LINE", "Trend Line"},
-            {"—", "HORIZONTAL_LINE", "Horizontal Line"},
-            {"⬜", "RECTANGLE", "Rectangle"},
-            {"T", "TEXT", "Text Label"},
+                {"↖", "NONE", "Cursor (default)"},
+                {"╱", "TREND_LINE", "Trend Line"},
+                {"—", "HORIZONTAL_LINE", "Horizontal Line"},
+                {"⬜", "RECTANGLE", "Rectangle"},
+                {"T", "TEXT", "Text Label"},
         };
 
         for (String[] t : tools) {
@@ -556,7 +573,7 @@ public class ChartPanel extends BorderPane {
     }
 
     // ===================== Publiczne API =====================
-    
+
     public void setState(ChartState newState, Consumer<Double> callback) {
         this.state = newState;
         this.onPriceSelected = callback;
@@ -586,13 +603,13 @@ public class ChartPanel extends BorderPane {
         this.pendingTpPrice = price;
         redraw();
     }
-    
+
     public void setPendingPreview(double entryPrice, boolean isLong) {
         this.pendingEntryPrice = entryPrice;
         this.showPendingPreview = true;
         redraw();
     }
-    
+
     public void hidePendingPreview() {
         this.showPendingPreview = false;
         redraw();
@@ -610,15 +627,6 @@ public class ChartPanel extends BorderPane {
         redraw();
     }
 
-    /** Ustawia handler wywoływany po kliknięciu przycisku menu (⋮) w toolbarze. */
-    public void setOnMenuRequested(Runnable handler) {
-        this.onMenuRequested = handler;
-    }
-
-    /** Zwraca przycisk menu w toolbarze (potrzebne np. do pozycjonowania mini-menu). */
-    public Button getMenuButton() {
-        return menuBtn;
-    }
 
     public void refreshPrice(Instrument inst) {
         if (inst == null || currentInstrument == null || !inst.getSymbol().equals(currentInstrument.getSymbol()))
@@ -711,10 +719,12 @@ public class ChartPanel extends BorderPane {
         return Math.min(candles.size(), first + getVisibleCandleCount() + 2);
     }
 
-    /** Zwraca wysokość obszaru wykresu (bez uwzględnienia panelu RSI) */
+    /** Zwraca wysokość obszaru wykresu (bez uwzględnienia paneli RSI/MACD) */
     private double getChartAreaH(double totalH) {
         double available = totalH - PAD_TOP - PAD_BOT;
-        return showRSI ? available * 0.70 : available;
+        if (showRSI && showMACD) return available * 0.55;
+        if (showRSI || showMACD) return available * 0.70;
+        return available;
     }
 
     /** Candle layout parameters — respects viewport */
@@ -833,15 +843,28 @@ public class ChartPanel extends BorderPane {
         drawTempDrawing(gc, cX, cY, cW, cH);
 
         gc.restore();
-        
+
         drawCrosshairAndSelection(gc, cX, cY, cW, cH, W, H);
         drawAxisLabels(gc, cX, cY, cW, cH, W, priceSpan);
 
         // Panel RSI
+        double rsiPanelBottom = cY + cH;
         if (showRSI) {
+            double available = H - PAD_TOP - PAD_BOT;
+            double rsiProportion = showMACD ? 0.225 : 0.30;
             double rsiY = cY + cH + 10;
-            double rsiH = (H - PAD_TOP - PAD_BOT) * 0.30 - 10;
+            double rsiH = available * rsiProportion - 10;
             drawRSIPanel(gc, rsiY, rsiH, cX, cW);
+            rsiPanelBottom = rsiY + rsiH;
+        }
+
+        // Panel MACD
+        if (showMACD) {
+            double available = H - PAD_TOP - PAD_BOT;
+            double macdProportion = showRSI ? 0.225 : 0.30;
+            double macdY = rsiPanelBottom + 10;
+            double macdH = available * macdProportion - 10;
+            drawMACDPanel(gc, macdY, macdH, cX, cW);
         }
     }
 
@@ -1075,7 +1098,7 @@ public class ChartPanel extends BorderPane {
             }
             gc.stroke();
         }
-        
+
         gc.restore();
 
         // Podpis osi dla wartości RSI
@@ -1090,6 +1113,197 @@ public class ChartPanel extends BorderPane {
         gc.setFill(AXIS_TEXT);
         gc.setFont(Font.font("Inter", FontWeight.BOLD, 10));
         gc.fillText("RSI(14)", cX + 4, rsiY + 14);
+    }
+
+    // ===================== Wskaźnik MACD =====================
+
+    /**
+     * Oblicza MACD: macdLine (EMA12 - EMA26), signalLine (EMA9 of macdLine), histogram (macd - signal).
+     * @return double[3][n] — [0]=macdLine, [1]=signalLine, [2]=histogram
+     */
+    private double[][] computeMACD() {
+        int n = candles.size();
+        double[][] result = new double[3][n];
+        if (n < 2) return result;
+
+        // EMA-12 (running initialization from first candle)
+        double[] ema12 = new double[n];
+        double mult12 = 2.0 / (12 + 1);
+        ema12[0] = candles.get(0).close();
+        for (int i = 1; i < n; i++) {
+            ema12[i] = (candles.get(i).close() - ema12[i - 1]) * mult12 + ema12[i - 1];
+        }
+
+        // EMA-26 (running initialization from first candle)
+        double[] ema26 = new double[n];
+        double mult26 = 2.0 / (26 + 1);
+        ema26[0] = candles.get(0).close();
+        for (int i = 1; i < n; i++) {
+            ema26[i] = (candles.get(i).close() - ema26[i - 1]) * mult26 + ema26[i - 1];
+        }
+
+        // MACD line = EMA12 - EMA26
+        double[] macdLine = new double[n];
+        for (int i = 0; i < n; i++) {
+            macdLine[i] = ema12[i] - ema26[i];
+        }
+
+        // Signal line = EMA-9 of MACD line
+        double[] signalLine = new double[n];
+        double mult9 = 2.0 / (9 + 1);
+        signalLine[0] = macdLine[0];
+        for (int i = 1; i < n; i++) {
+            signalLine[i] = (macdLine[i] - signalLine[i - 1]) * mult9 + signalLine[i - 1];
+        }
+
+        // Histogram = MACD - Signal
+        double[] histogram = new double[n];
+        for (int i = 0; i < n; i++) {
+            histogram[i] = macdLine[i] - signalLine[i];
+        }
+
+        result[0] = macdLine;
+        result[1] = signalLine;
+        result[2] = histogram;
+        return result;
+    }
+
+    private void drawMACDPanel(GraphicsContext gc, double macdY, double macdH, double cX, double cW) {
+        if (macdH <= 0) return;
+
+        // Tło
+        gc.setFill(BG);
+        gc.fillRect(cX, macdY, cW, macdH);
+
+        // Linia oddzielająca panele
+        gc.setStroke(GRID);
+        gc.setLineWidth(1);
+        gc.strokeLine(cX, macdY, cX + cW, macdY);
+
+        // Oblicz MACD
+        double[][] macdData = computeMACD();
+        double[] macdLine = macdData[0];
+        double[] signalLine = macdData[1];
+        double[] histogram = macdData[2];
+        int n = candles.size();
+        int macdStart = 0;
+        if (n < 2) return;
+
+        // Auto-skala na podstawie histogramu widocznych świec
+        int firstVis = getFirstVisibleIndex();
+        int lastVis = getLastVisibleIndex();
+        double hMin = Double.MAX_VALUE, hMax = -Double.MAX_VALUE;
+        for (int i = Math.max(macdStart, firstVis); i < lastVis; i++) {
+            double v = histogram[i];
+            double ml = macdLine[i];
+            double sl = signalLine[i];
+            if (v < hMin) hMin = v;
+            if (v > hMax) hMax = v;
+            if (ml < hMin) hMin = ml;
+            if (ml > hMax) hMax = ml;
+            if (sl < hMin) hMin = sl;
+            if (sl > hMax) hMax = sl;
+        }
+        if (hMin == Double.MAX_VALUE) { hMin = -1; hMax = 1; }
+        double span = hMax - hMin;
+        if (span == 0) span = 1;
+        // 10% padding
+        hMin -= span * 0.10;
+        hMax += span * 0.10;
+        span = hMax - hMin;
+
+        // Linie siatki
+        gc.setStroke(GRID);
+        gc.setLineWidth(0.5);
+        for (int i = 0; i <= 4; i++) {
+            double y = macdY + macdH * i / 4.0;
+            gc.strokeLine(cX, y, cX + cW, y);
+        }
+
+        // Przerywana linia zerowa
+        double zeroY = macdY + macdH * (hMax / span);
+        gc.setStroke(GRID);
+        gc.setLineWidth(1.0);
+        gc.setLineDashes(4, 4);
+        gc.strokeLine(cX, zeroY, cX + cW, zeroY);
+        gc.setLineDashes();
+
+        gc.save();
+        gc.beginPath();
+        gc.rect(cX, macdY, cW, macdH);
+        gc.clip();
+
+        double totalW = getTotalW(cW);
+        double barW = Math.max(1, totalW * 0.5);
+
+        // Rysowanie histogramu (słupki)
+        for (int i = Math.max(macdStart, firstVis); i < lastVis; i++) {
+            double x = candleIndexToX(i, cX, cW);
+            double val = histogram[i];
+            double barY;
+            double barH;
+            if (val >= 0) {
+                gc.setFill(Color.web("#26a69a")); // zielony
+                barY = macdY + macdH * ((hMax - val) / span);
+                barH = zeroY - barY;
+            } else {
+                gc.setFill(Color.web("#ef5350")); // czerwony
+                barY = zeroY;
+                barH = macdY + macdH * ((hMax - val) / span) - zeroY;
+            }
+            gc.fillRect(x - barW / 2, barY, barW, Math.max(0.5, barH));
+        }
+
+        // MACD line (niebieska)
+        gc.setStroke(Color.web("#4da6ff"));
+        gc.setLineWidth(1.5);
+        gc.beginPath();
+        boolean started = false;
+        for (int i = Math.max(macdStart, firstVis); i < lastVis; i++) {
+            double x = candleIndexToX(i, cX, cW);
+            double y = macdY + macdH * ((hMax - macdLine[i]) / span);
+            if (!started) {
+                gc.moveTo(x, y);
+                started = true;
+            } else {
+                gc.lineTo(x, y);
+            }
+        }
+        gc.stroke();
+
+        // Signal line (pomarańczowa)
+        gc.setStroke(Color.web("#EF9F27"));
+        gc.setLineWidth(1.5);
+        gc.beginPath();
+        started = false;
+        for (int i = Math.max(macdStart, firstVis); i < lastVis; i++) {
+            double x = candleIndexToX(i, cX, cW);
+            double y = macdY + macdH * ((hMax - signalLine[i]) / span);
+            if (!started) {
+                gc.moveTo(x, y);
+                started = true;
+            } else {
+                gc.lineTo(x, y);
+            }
+        }
+        gc.stroke();
+
+        gc.restore();
+
+        // Etykiety osi Y: min, 0, max (12px, AXIS_TEXT, wyrównane do prawej)
+        gc.setFill(AXIS_TEXT);
+        gc.setFont(Font.font("Inter", 12));
+        // Max
+        gc.fillText(String.format(Locale.US, "%.4f", hMax), cX + cW + 4, macdY + 12);
+        // Zero
+        gc.fillText("0", cX + cW + 4, zeroY + 4);
+        // Min
+        gc.fillText(String.format(Locale.US, "%.4f", hMin), cX + cW + 4, macdY + macdH);
+
+        // Etykieta "MACD(12,26,9)"
+        gc.setFill(AXIS_TEXT);
+        gc.setFont(Font.font("Inter", FontWeight.BOLD, 10));
+        gc.fillText("MACD(12,26,9)", cX + 4, macdY + 14);
     }
 
     // ===================== Rysowanie elementów =====================
@@ -1168,13 +1382,13 @@ public class ChartPanel extends BorderPane {
     }
 
     // ===================== Pozycje =====================
-    
+
     private void drawPositions(GraphicsContext gc, double cX, double cY, double cW, double cH) {
         if (currentInstrument == null) return;
-        
+
         for (Position p : openPositions) {
             if (!p.getInstrument().getSymbol().equals(currentInstrument.getSymbol())) continue;
-            
+
             // Rysowanie poziomej linii ceny wejścia (Entry)
             double entryY = priceToYInArea(p.getEntryPrice(), cY, cH);
             if (entryY >= cY && entryY <= cY + cH) {
@@ -1185,7 +1399,7 @@ public class ChartPanel extends BorderPane {
                 gc.setFont(Font.font("Inter", FontWeight.BOLD, 10));
                 gc.fillText("Entry " + formatPrice(p.getEntryPrice()), cX + 5, entryY - 4);
             }
-            
+
             // Rysowanie poziomej linii Stop Loss (SL)
             if (p.getStopLoss() > 0) {
                 double slY = priceToYInArea(p.getStopLoss(), cY, cH);
@@ -1200,7 +1414,7 @@ public class ChartPanel extends BorderPane {
                     gc.fillText("SL " + formatPrice(p.getStopLoss()), cX + cW + 4, slY + 4);
                 }
             }
-            
+
             // Rysowanie poziomej linii Take Profit (TP)
             if (p.getTakeProfit() > 0) {
                 double tpY = priceToYInArea(p.getTakeProfit(), cY, cH);
@@ -1264,7 +1478,7 @@ public class ChartPanel extends BorderPane {
     private void drawCrosshairAndSelection(GraphicsContext gc, double cX, double cY, double cW, double cH, double W, double H) {
         if (crossX < cX || crossX > cX + cW || crossY < cY || crossY > cY + cH)
             return;
-            
+
         Color crossColor = CROSS;
         if (state == ChartState.SELECTING_SL) crossColor = SL_COLOR;
         else if (state == ChartState.SELECTING_TP) crossColor = TP_COLOR;
@@ -1279,11 +1493,11 @@ public class ChartPanel extends BorderPane {
         double price = yToPriceInArea(crossY, cY, cH);
         gc.setFill(crossColor.equals(CROSS) ? Color.web("#30363d") : crossColor.deriveColor(1,1,1,0.8));
         gc.fillRoundRect(cX + cW + 2, crossY - 9, 58, 18, 4, 4);
-        
+
         gc.setFill(state == ChartState.IDLE ? AXIS_TEXT : Color.WHITE);
         gc.setFont(Font.font("Inter", FontWeight.BOLD, 10));
         gc.fillText(formatPrice(price), cX + cW + 6, crossY + 5);
-        
+
         if (state != ChartState.IDLE) {
             gc.setFill(crossColor);
             gc.fillText(state == ChartState.SELECTING_SL ? "Click to set SL" : "Click to set TP", crossX + 10, crossY - 10);
@@ -1295,7 +1509,7 @@ public class ChartPanel extends BorderPane {
     // ===================== Etykiety osi =====================
 
     private void drawAxisLabels(GraphicsContext gc, double cX, double cY, double cW, double cH, double W,
-            double priceSpan) {
+                                double priceSpan) {
         gc.setFill(AXIS_TEXT);
         gc.setFont(Font.font("Inter", 10));
 
@@ -1315,10 +1529,18 @@ public class ChartPanel extends BorderPane {
         String pattern = "1D".equals(activeRange) ? "HH:mm" : "MM/dd";
         DateTimeFormatter fmt = DateTimeFormatter.ofPattern(pattern).withZone(ZoneId.systemDefault());
 
-        // Gdy widoczny jest RSI, rysuj etykiety z datą poniżej panelu RSI
+        // Gdy widoczne są panele RSI/MACD, rysuj etykiety z datą poniżej ostatniego panelu
         double dateLabelsY = cY + cH + 20;
-        if (showRSI) {
-            double rsiH = (canvas.getHeight() - PAD_TOP - PAD_BOT) * 0.30 - 10;
+        double available = canvas.getHeight() - PAD_TOP - PAD_BOT;
+        if (showRSI && showMACD) {
+            double rsiH = available * 0.225 - 10;
+            double macdH = available * 0.225 - 10;
+            dateLabelsY = cY + cH + 10 + rsiH + 10 + macdH + 16;
+        } else if (showMACD) {
+            double macdH = available * 0.30 - 10;
+            dateLabelsY = cY + cH + 10 + macdH + 16;
+        } else if (showRSI) {
+            double rsiH = available * 0.30 - 10;
             dateLabelsY = cY + cH + 10 + rsiH + 16;
         }
 

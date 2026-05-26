@@ -53,6 +53,9 @@ public class PortfolioPanel extends VBox {
     // Wewnętrzny kontener na zawartość
     private final VBox content = new VBox(0);
 
+    private final Button menuBtn = new Button("\u2630");
+    private Runnable onMenuRequested;
+
     public PortfolioPanel(PortfolioService portfolio, ChartPanel chartPanel) {
         this.portfolio = portfolio;
         this.chartPanel = chartPanel;
@@ -119,9 +122,31 @@ public class PortfolioPanel extends VBox {
         updateOrderValue(); //to refresh pending preview on chart
     }
 
+    /** Zwraca przycisk menu (potrzebne do pozycjonowania mini-menu). */
+    public Button getMenuButton() {
+        return menuBtn;
+    }
+
+    /** Ustawia handler wywoływany po kliknięciu przycisku menu (☰). */
+    public void setOnMenuRequested(Runnable handler) {
+        this.onMenuRequested = handler;
+    }
+
     private void buildAccountSection() {
         Label sectionTitle = new Label("ACCOUNT");
         sectionTitle.getStyleClass().add("section-title");
+
+        // Przycisk menu (☰) obok tytułu ACCOUNT
+        menuBtn.getStyleClass().add("chart-type-btn");
+        menuBtn.setTooltip(new javafx.scene.control.Tooltip("Menu"));
+        menuBtn.setOnAction(e -> {
+            if (onMenuRequested != null) onMenuRequested.run();
+        });
+
+        Region headerSpacer = new Region();
+        HBox.setHgrow(headerSpacer, Priority.ALWAYS);
+        HBox header = new HBox(8, sectionTitle, headerSpacer, menuBtn);
+        header.setAlignment(Pos.CENTER_LEFT);
 
         balanceLabel.getStyleClass().add("balance-value");
         equityLabel.getStyleClass().add("equity-value");
@@ -132,10 +157,10 @@ public class PortfolioPanel extends VBox {
         resetBtn.setOnAction(e -> {
             com.stockdemo.service.PortfolioPersistence.reset(portfolio);
             refresh();
-            showToast("Reset", "Portfel zresetowany do $100,000.00");
+            showToast("Reset", "Portfolio has been reset to $100,000.00");
         });
 
-        VBox section = new VBox(6, sectionTitle, balanceLabel, equityLabel, pnlLabel, resetBtn);
+        VBox section = new VBox(6, header, balanceLabel, equityLabel, pnlLabel, resetBtn);
         section.getStyleClass().add("portfolio-section");
         content.getChildren().add(section);
     }
