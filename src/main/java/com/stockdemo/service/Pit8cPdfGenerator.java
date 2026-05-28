@@ -25,6 +25,32 @@ public class Pit8cPdfGenerator {
     private static final float ML = 30, MR = 30;
     private static final float CW = PW - ML - MR; // ~535
 
+    // Font Paths
+    private static final String[] REGULAR_FONT_PATHS = {
+        "/System/Library/Fonts/Supplemental/Arial.ttf",
+        "/Library/Fonts/Arial.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"
+    };
+    private static final String[] BOLD_FONT_PATHS = {
+        "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
+        "/Library/Fonts/Arial Bold.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"
+    };
+
+    // Color tones
+    private static final float COLOR_GRAY_FILL = 0.88f;
+    private static final float COLOR_BLACK = 0f;
+
+    // Header & Version Strings
+    private static final String PIT_8C_VERSION = "PIT-8C(13)";
+    private static final String POLTAX_TITLE = "POLTAX";
+    private static final String POLTAX_SUBTITLE = "POLA JASNE WYPELNIA SKLADAJACY, POLA CIEMNE WYPELNIA URZAD. WYPELNIC DUZYMI, DRUKOWANYMI LITERAMI, CZARNYM LUB NIEBIESKIM KOLOREM.";
+    private static final String POLTAX_URL = "Skladanie w wersji elektronicznej: www.podatki.gov.pl";
+
+    // Currencies
+    private static final String CURRENCY_ZL = "zl";
+    private static final String CURRENCY_GR = "gr";
+
     private PDDocument doc;
     private PDFont f, fb; // regular, bold
     private PDPageContentStream cs;
@@ -49,12 +75,8 @@ public class Pit8cPdfGenerator {
     // ── Fonts ──
 
     private void loadFonts() throws IOException {
-        String[] rPaths = {"/System/Library/Fonts/Supplemental/Arial.ttf", "/Library/Fonts/Arial.ttf",
-                "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"};
-        String[] bPaths = {"/System/Library/Fonts/Supplemental/Arial Bold.ttf", "/Library/Fonts/Arial Bold.ttf",
-                "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"};
-        f = tryLoad(rPaths);
-        fb = tryLoad(bPaths);
+        f = tryLoad(REGULAR_FONT_PATHS);
+        fb = tryLoad(BOLD_FONT_PATHS);
         if (f != null && fb != null) { ttf = true; return; }
         f = PDType1Font.HELVETICA;
         fb = PDType1Font.HELVETICA_BOLD;
@@ -87,9 +109,9 @@ public class Pit8cPdfGenerator {
     }
 
     private void grayBar(float x, float y, float w, float h) throws IOException {
-        cs.setNonStrokingColor(0.88f);
+        cs.setNonStrokingColor(COLOR_GRAY_FILL);
         cs.addRect(x, PH - y - h, w, h); cs.fill();
-        cs.setNonStrokingColor(0f);
+        cs.setNonStrokingColor(COLOR_BLACK);
         cs.addRect(x, PH - y - h, w, h); cs.stroke();
     }
 
@@ -113,6 +135,39 @@ public class Pit8cPdfGenerator {
         return String.format(Locale.US, "%,d", zl) + "    " + String.format("%02d", g);
     }
 
+    // ── Refactoring Helper Methods ──
+
+    private void drawPoltaxHeader(float y) throws IOException {
+        grayBar(ML, y, CW, 16);
+        txt(ML + 4, y + 11, POLTAX_TITLE, fb, 9);
+        txt(ML + 65, y + 6, POLTAX_SUBTITLE, f, 4);
+        txt(PW - MR - 130, y + 12, POLTAX_URL, f, 5);
+    }
+
+    private void drawSectionHeader(float y, String title) throws IOException {
+        grayBar(ML, y, CW, 13);
+        txt(ML + 4, y + 10, title, fb, 7.5f);
+    }
+
+    private void drawField(float x, float y, float w, float h, String label, String value) throws IOException {
+        drawField(x, y, w, h, label, value, 5.5f, 8f, 7f, 17f);
+    }
+
+    private void drawField(float x, float y, float w, float h, String label, String value, float labelSize, float valueSize) throws IOException {
+        drawField(x, y, w, h, label, value, labelSize, valueSize, 7f, 17f);
+    }
+
+    private void drawField(float x, float y, float w, float h, String label, String value, float labelSize, float valueSize, float labelYOffset, float valueYOffset) throws IOException {
+        rect(x, y, w, h);
+        txt(x + 3, y + labelYOffset, label, f, labelSize);
+        txt(x + 3, y + valueYOffset, value, f, valueSize);
+    }
+
+    private void drawLabeledCheckbox(float x, float y, String label, boolean checked, float labelSize) throws IOException {
+        checkbox(x, y + 5, checked);
+        txt(x + 11, y + 12, label, f, labelSize);
+    }
+
     // ── Strona 1 ──
 
     private void page1(Pit8cData d, double rev, double cost) throws IOException {
@@ -124,19 +179,14 @@ public class Pit8cPdfGenerator {
         float y = 25;
 
         // ─── POLTAX Header ───
-        grayBar(ML, y, CW, 16);
-        txt(ML + 4, y + 11, "POLTAX", fb, 9);
-        txt(ML + 65, y + 6, "POLA JASNE WYPELNIA SKLADAJACY, POLA CIEMNE WYPELNIA URZAD. WYPELNIC DUZYMI, DRUKOWANYMI LITERAMI, CZARNYM LUB NIEBIESKIM KOLOREM.", f, 4);
-        txt(PW - MR - 130, y + 12, "Skladanie w wersji elektronicznej: www.podatki.gov.pl", f, 5);
+        drawPoltaxHeader(y);
         y += 18;
 
         // ─── Wiersz: NIP | Nr dok. | Status ───
         float c1 = CW * 0.4f, c2 = CW * 0.35f, c3 = CW * 0.25f;
-        rect(ML, y, c1, 24); rect(ML + c1, y, c2, 24); rect(ML + c1 + c2, y, c3, 24);
-        txt(ML + 3, y + 8, "1. Identyfikator podatkowy NIP skladajacego", f, 5.5f);
-        txt(ML + 3, y + 19, d.nipSkladajacego, f, 9);
-        txt(ML + c1 + 3, y + 8, "2. Nr dokumentu", f, 5.5f);
-        txt(ML + c1 + c2 + 3, y + 8, "3. Status", f, 5.5f);
+        drawField(ML, y, c1, 24, "1. Identyfikator podatkowy NIP skladajacego", d.nipSkladajacego, 5.5f, 9f, 8f, 19f);
+        drawField(ML + c1, y, c2, 24, "2. Nr dokumentu", null);
+        drawField(ML + c1 + c2, y, c3, 24, "3. Status", null);
         y += 27;
 
         // ─── PIT-8C Tytuł ───
@@ -169,28 +219,20 @@ public class Pit8cPdfGenerator {
         y += 56;
 
         // ═══ SEKCJA A ═══
-        grayBar(ML, y, CW, 13);
-        txt(ML + 4, y + 10, "A. Miejsce i cel skladania informacji", fb, 7.5f);
+        drawSectionHeader(y, "A. Miejsce i cel skladania informacji");
         y += 15;
 
-        rect(ML, y, CW, 22);
-        txt(ML + 3, y + 8, "5. Urzad skarbowy, do ktorego jest adresowana informacja", f, 5.5f);
-        txt(ML + 3, y + 18, d.urzadSkarbowy, f, 9);
+        drawField(ML, y, CW, 22, "5. Urzad skarbowy, do ktorego jest adresowana informacja", d.urzadSkarbowy, 5.5f, 9f, 8f, 18f);
         y += 24;
 
         rect(ML, y, CW, 18);
         txt(ML + 3, y + 7, "6. Cel zlozenia formularza (zaznaczyc wlasciwy kwadrat):", f, 5.5f);
-        float cx1 = ML + CW * 0.38f;
-        checkbox(cx1, y + 5, d.celZlozenie);
-        txt(cx1 + 11, y + 12, "1. zlozenie informacji", f, 6.5f);
-        float cx2 = ML + CW * 0.65f;
-        checkbox(cx2, y + 5, !d.celZlozenie);
-        txt(cx2 + 11, y + 12, "2. korekta informacji", f, 6.5f);
+        drawLabeledCheckbox(ML + CW * 0.38f, y, "1. zlozenie informacji", d.celZlozenie, 6.5f);
+        drawLabeledCheckbox(ML + CW * 0.65f, y, "2. korekta informacji", !d.celZlozenie, 6.5f);
         y += 20;
 
         // ═══ SEKCJA B ═══
-        grayBar(ML, y, CW, 13);
-        txt(ML + 4, y + 10, "B. Dane identyfikacyjne skladajacego", fb, 7.5f);
+        drawSectionHeader(y, "B. Dane identyfikacyjne skladajacego");
         y += 15;
 
         txt(ML + 30, y + 6, "* - dotyczy skladajacego niebedacego osoba fizyczna", f, 5);
@@ -199,77 +241,49 @@ public class Pit8cPdfGenerator {
 
         rect(ML, y, CW, 18);
         txt(ML + 3, y + 7, "7. Rodzaj skladajacego (zaznaczyc wlasciwy kwadrat):", f, 5.5f);
-        cx1 = ML + CW * 0.38f;
-        checkbox(cx1, y + 5, !d.osobaFizyczna);
-        txt(cx1 + 11, y + 12, "1. skladajacy niebedacy osoba fizyczna", f, 6);
-        cx2 = ML + CW * 0.72f;
-        checkbox(cx2, y + 5, d.osobaFizyczna);
-        txt(cx2 + 11, y + 12, "2. osoba fizyczna", f, 6);
+        drawLabeledCheckbox(ML + CW * 0.38f, y, "1. skladajacy niebedacy osoba fizyczna", !d.osobaFizyczna, 6f);
+        drawLabeledCheckbox(ML + CW * 0.72f, y, "2. osoba fizyczna", d.osobaFizyczna, 6f);
         y += 20;
 
-        rect(ML, y, CW, 20);
-        txt(ML + 3, y + 7, "8. Nazwa pelna*", f, 5.5f);
-        txt(ML + 3, y + 17, d.nazwaPelna, f, 8);
+        drawField(ML, y, CW, 20, "8. Nazwa pelna*", d.nazwaPelna);
         y += 22;
 
-        rect(ML, y, CW, 20);
-        txt(ML + 3, y + 7, "9. Nazwisko, pierwsze imie, data urodzenia**", f, 5.5f);
-        txt(ML + 3, y + 17, d.nazwisko + ", " + d.imie + ", " + d.dataUrodzenia, f, 8);
+        drawField(ML, y, CW, 20, "9. Nazwisko, pierwsze imie, data urodzenia**", d.nazwisko + ", " + d.imie + ", " + d.dataUrodzenia);
         y += 22;
 
         // ═══ SEKCJA C ═══
-        grayBar(ML, y, CW, 13);
-        txt(ML + 4, y + 10, "C. Dane identyfikacyjne i adres zamieszkania podatnika", fb, 7.5f);
+        drawSectionHeader(y, "C. Dane identyfikacyjne i adres zamieszkania podatnika");
         y += 15;
 
-        rect(ML, y, CW, 20);
-        txt(ML + 3, y + 7, "10. Identyfikator podatkowy NIP / numer PESEL", f, 5.5f);
-        txt(ML + 3, y + 17, d.nipPesel, f, 9);
+        drawField(ML, y, CW, 20, "10. Identyfikator podatkowy NIP / numer PESEL", d.nipPesel, 5.5f, 9f);
         y += 22;
 
         // 11-13
         float w11 = CW * 0.38f, w12 = CW * 0.3f, w13 = CW * 0.32f;
-        rect(ML, y, w11, 20); rect(ML + w11, y, w12, 20); rect(ML + w11 + w12, y, w13, 20);
-        txt(ML + 3, y + 7, "11. Nazwisko", f, 5.5f);
-        txt(ML + 3, y + 17, d.nazwisko, f, 8);
-        txt(ML + w11 + 3, y + 7, "12. Pierwsze imie", f, 5.5f);
-        txt(ML + w11 + 3, y + 17, d.imie, f, 8);
-        txt(ML + w11 + w12 + 3, y + 7, "13. Data urodzenia (dzien – miesiac – rok)", f, 4.5f);
-        txt(ML + w11 + w12 + 3, y + 17, d.dataUrodzenia, f, 8);
+        drawField(ML, y, w11, 20, "11. Nazwisko", d.nazwisko);
+        drawField(ML + w11, y, w12, 20, "12. Pierwsze imie", d.imie);
+        drawField(ML + w11 + w12, y, w13, 20, "13. Data urodzenia (dzien – miesiac – rok)", d.dataUrodzenia, 4.5f, 8f);
         y += 22;
 
         // 14-16
         float w14 = CW * 0.22f, w15 = CW * 0.42f, w16 = CW * 0.36f;
-        rect(ML, y, w14, 20); rect(ML + w14, y, w15, 20); rect(ML + w14 + w15, y, w16, 20);
-        txt(ML + 3, y + 7, "14. Kraj", f, 5.5f);
-        txt(ML + 3, y + 17, d.kraj, f, 8);
-        txt(ML + w14 + 3, y + 7, "15. Wojewodztwo", f, 5.5f);
-        txt(ML + w14 + 3, y + 17, d.wojewodztwo, f, 8);
-        txt(ML + w14 + w15 + 3, y + 7, "16. Powiat", f, 5.5f);
-        txt(ML + w14 + w15 + 3, y + 17, d.powiat, f, 8);
+        drawField(ML, y, w14, 20, "14. Kraj", d.kraj);
+        drawField(ML + w14, y, w15, 20, "15. Wojewodztwo", d.wojewodztwo);
+        drawField(ML + w14 + w15, y, w16, 20, "16. Powiat", d.powiat);
         y += 22;
 
         // 17-20
         float w17 = CW * 0.28f, w18 = CW * 0.40f, w19 = CW * 0.16f, w20 = CW * 0.16f;
-        rect(ML, y, w17, 20); rect(ML + w17, y, w18, 20);
-        rect(ML + w17 + w18, y, w19, 20); rect(ML + w17 + w18 + w19, y, w20, 20);
-        txt(ML + 3, y + 7, "17. Gmina", f, 5.5f);
-        txt(ML + 3, y + 17, d.gmina, f, 8);
-        txt(ML + w17 + 3, y + 7, "18. Ulica", f, 5.5f);
-        txt(ML + w17 + 3, y + 17, d.ulica, f, 8);
-        txt(ML + w17 + w18 + 3, y + 7, "19. Nr domu", f, 5.5f);
-        txt(ML + w17 + w18 + 3, y + 17, d.nrDomu, f, 8);
-        txt(ML + w17 + w18 + w19 + 3, y + 7, "20. Nr lokalu", f, 5.5f);
-        txt(ML + w17 + w18 + w19 + 3, y + 17, d.nrLokalu, f, 8);
+        drawField(ML, y, w17, 20, "17. Gmina", d.gmina);
+        drawField(ML + w17, y, w18, 20, "18. Ulica", d.ulica);
+        drawField(ML + w17 + w18, y, w19, 20, "19. Nr domu", d.nrDomu);
+        drawField(ML + w17 + w18 + w19, y, w20, 20, "20. Nr lokalu", d.nrLokalu);
         y += 22;
 
         // 21-22
         float w21 = CW * 0.7f, w22 = CW * 0.3f;
-        rect(ML, y, w21, 20); rect(ML + w21, y, w22, 20);
-        txt(ML + 3, y + 7, "21. Miejscowosc", f, 5.5f);
-        txt(ML + 3, y + 17, d.miejscowosc, f, 8);
-        txt(ML + w21 + 3, y + 7, "22. Kod pocztowy", f, 5.5f);
-        txt(ML + w21 + 3, y + 17, d.kodPocztowy, f, 8);
+        drawField(ML, y, w21, 20, "21. Miejscowosc", d.miejscowosc);
+        drawField(ML + w21, y, w22, 20, "22. Kod pocztowy", d.kodPocztowy);
         y += 24;
 
         // ═══ SEKCJA D ═══
@@ -312,24 +326,25 @@ public class Pit8cPdfGenerator {
             rect(ML + dW, y, pW, rh);
             rect(ML + dW + pW, y, kW, rh);
 
-            txt(ML + 3, y + (i == rows.length - 1 ? 8 : 8), (String) r[0], i == rows.length - 1 ? fb : f, 5.5f);
+            txt(ML + 3, y + 8, (String) r[0], i == rows.length - 1 ? fb : f, 5.5f);
             txt(ML + dW + 3, y + 8, (String) r[1], fb, 6);
             String rv = fmtZl((double) r[2]);
             if (!rv.isEmpty()) txt(ML + dW + pW * 0.3f, y + 16, rv, f, 7);
             txt(ML + dW + pW + 3, y + 8, (String) r[3], fb, 6);
             String cv = fmtZl((double) r[4]);
             if (!cv.isEmpty()) txt(ML + dW + pW + kW * 0.3f, y + 16, cv, f, 7);
+            
             // zł / gr labels
-            txt(ML + dW + pW * 0.7f, y + 16, "zl", f, 5);
-            txt(ML + dW + pW * 0.88f, y + 16, "gr", f, 5);
-            txt(ML + dW + pW + kW * 0.7f, y + 16, "zl", f, 5);
-            txt(ML + dW + pW + kW * 0.88f, y + 16, "gr", f, 5);
+            txt(ML + dW + pW * 0.7f, y + 16, CURRENCY_ZL, f, 5);
+            txt(ML + dW + pW * 0.88f, y + 16, CURRENCY_GR, f, 5);
+            txt(ML + dW + pW + kW * 0.7f, y + 16, CURRENCY_ZL, f, 5);
+            txt(ML + dW + pW + kW * 0.88f, y + 16, CURRENCY_GR, f, 5);
             y += rh;
         }
 
         // Footer
         y = PH - 22;
-        txt(PW - MR - 80, y, "PIT-8C(13)", fb, 7);
+        txt(PW - MR - 80, y, PIT_8C_VERSION, fb, 7);
         txt(PW - MR - 20, y, "1/2", f, 7);
 
         cs.close();
@@ -346,28 +361,25 @@ public class Pit8cPdfGenerator {
         float y = 25;
 
         // POLTAX Header
-        grayBar(ML, y, CW, 16);
-        txt(ML + 4, y + 11, "POLTAX", fb, 9);
-        txt(ML + 65, y + 6, "POLA JASNE WYPELNIA SKLADAJACY, POLA CIEMNE WYPELNIA URZAD. WYPELNIC DUZYMI, DRUKOWANYMI LITERAMI, CZARNYM LUB NIEBIESKIM KOLOREM.", f, 4);
-        txt(PW - MR - 130, y + 12, "Skladanie w wersji elektronicznej: www.podatki.gov.pl", f, 5);
+        drawPoltaxHeader(y);
         y += 20;
 
         // ═══ SEKCJA E ═══
-        grayBar(ML, y, CW, 13);
-        txt(ML + 4, y + 10, "E. Informacja o wysokosci przychodow niewykazanych w czesci D", fb, 7.5f);
+        drawSectionHeader(y, "E. Informacja o wysokosci przychodow niewykazanych w czesci D");
         y += 15;
 
         rect(ML, y, CW * 0.7f, 22);
         rect(ML + CW * 0.7f, y, CW * 0.3f, 22);
         txt(ML + 3, y + 8, "Przychody z odplatnego zbycia papierow wartosciowych", f, 5.5f);
-        txt(ML + CW * 0.7f + 3, y + 8, "37.", fb, 6);
-        txt(ML + CW * 0.7f + CW * 0.17f, y + 17, "zl", f, 5);
-        txt(ML + CW * 0.7f + CW * 0.26f, y + 17, "gr", f, 5);
+        
+        float col2X = ML + CW * 0.7f;
+        txt(col2X + 3, y + 8, "37.", fb, 6);
+        txt(col2X + CW * 0.17f, y + 17, CURRENCY_ZL, f, 5);
+        txt(col2X + CW * 0.26f, y + 17, CURRENCY_GR, f, 5);
         y += 26;
 
         // ═══ SEKCJA F ═══
-        grayBar(ML, y, CW, 13);
-        txt(ML + 4, y + 10, "F. Podpis osoby upowaznionej do sporzadzenia informacji", fb, 7.5f);
+        drawSectionHeader(y, "F. Podpis osoby upowaznionej do sporzadzenia informacji");
         y += 15;
 
         rect(ML, y, CW, 40);
@@ -406,7 +418,7 @@ public class Pit8cPdfGenerator {
         // Footer
         y = PH - 30;
         rect(ML, y, 65, 14);
-        txt(ML + 4, y + 10, "PIT-8C(13)", fb, 7);
+        txt(ML + 4, y + 10, PIT_8C_VERSION, fb, 7);
         txt(ML + 55, y + 10, "2/2", f, 7);
 
         cs.close();
