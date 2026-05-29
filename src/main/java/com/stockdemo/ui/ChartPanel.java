@@ -43,23 +43,23 @@ public class ChartPanel extends BorderPane {
     private double panStartPriceOffset = 0.0;
     private double priceOffset = 0.0;
 
-    private static final Color BG = Color.web("#0d1117");
-    private static final Color GRID = Color.web("#21262d");
-    private static final Color AXIS_TEXT = Color.web("#8b949e");
     private static final Color BULL = Color.web("#26a69a");
     private static final Color BEAR = Color.web("#ef5350");
-    private static final Color LINE_COLOR = Color.web("#8b949e");
     private static final Color ENTRY_COLOR = Color.web("#1f6feb");
     private static final Color SL_COLOR = Color.web("#f85149");
     private static final Color TP_COLOR = Color.web("#3fb950");
-    private static final Color CROSS = Color.web("#30363d");
 
     // Kolory linii MA
-    private static final Color MA20_COLOR = Color.YELLOW;
     private static final Color MA50_COLOR = Color.web("#4da6ff");
 
-    // Kolor rysowania
-    private static final Color DRAWING_COLOR = Color.web("#ffffffcc"); // kolor biały, przezroczystość 0.8
+    private Color bgColor = Color.web("#0d1117");
+    private Color gridColor = Color.web("#21262d");
+    private Color axisTextColor = Color.web("#8b949e");
+    private Color lineColor = Color.web("#8b949e");
+    private Color crosshairColor = Color.web("#30363d");
+    private Color drawingColor = Color.web("#ffffffcc");
+    private Color rsiLineColor = Color.WHITE;
+    private Color ma20Color = Color.YELLOW;
 
     private static final int PAD_LEFT = 12;
     private static final int PAD_RIGHT = 60;
@@ -121,6 +121,7 @@ public class ChartPanel extends BorderPane {
     private final List<Button> drawingBtns = new ArrayList<>();
 
     // Przycisk MA50 do włączania/wyłączania w zależności od ilości wczytanych świec
+    private ToggleButton btnMA20;
     private ToggleButton btnMA50;
 
 
@@ -187,7 +188,7 @@ public class ChartPanel extends BorderPane {
         });
 
         // === Przyciski przełączania MA ===
-        ToggleButton btnMA20 = new ToggleButton("MA20");
+        btnMA20 = new ToggleButton("MA20");
         btnMA20.getStyleClass().add("ma-toggle");
         btnMA20.setStyle("-fx-text-fill: #ffff00;");
         btnMA20.selectedProperty().addListener((o, old, sel) -> {
@@ -434,6 +435,21 @@ public class ChartPanel extends BorderPane {
         this.setTop(toolbar);
         this.setLeft(drawingToolbar);
         this.setCenter(canvasPane);
+    }
+
+    public void applyTheme(boolean isDark) {
+        bgColor = Color.web(isDark ? "#0d1117" : "#ffffff");
+        gridColor = Color.web(isDark ? "#21262d" : "#e8ecef");
+        axisTextColor = Color.web(isDark ? "#8b949e" : "#57606a");
+        lineColor = Color.web(isDark ? "#8b949e" : "#57606a");
+        crosshairColor = Color.web(isDark ? "#30363d" : "#afb8c1");
+        drawingColor = Color.web(isDark ? "#ffffffcc" : "#1f2328cc");
+        rsiLineColor = Color.web(isDark ? "#ffffff" : "#1f2328");
+        ma20Color = Color.web(isDark ? "#ffff00" : "#9a6700");
+        if (btnMA20 != null) {
+            btnMA20.setStyle("-fx-text-fill: " + (isDark ? "#ffff00" : "#9a6700") + ";");
+        }
+        redraw();
     }
 
     // ===================== Pasek rysowania =====================
@@ -785,11 +801,11 @@ public class ChartPanel extends BorderPane {
         double W = canvas.getWidth();
         double H = canvas.getHeight();
 
-        gc.setFill(BG);
+        gc.setFill(bgColor);
         gc.fillRect(0, 0, W, H);
 
         if (candles.isEmpty()) {
-            gc.setFill(AXIS_TEXT);
+            gc.setFill(axisTextColor);
             gc.setFont(Font.font("Inter", 14));
             gc.fillText("No data", W / 2 - 30, H / 2);
             return;
@@ -833,7 +849,7 @@ public class ChartPanel extends BorderPane {
             drawLine(gc, cX, cY, cW, cH);
 
         // Wskaźniki MA
-        if (showMA20) drawMA(gc, cX, cY, cW, cH, 20, MA20_COLOR);
+        if (showMA20) drawMA(gc, cX, cY, cW, cH, 20, ma20Color);
         if (showMA50) drawMA(gc, cX, cY, cW, cH, 50, MA50_COLOR);
 
         drawPositions(gc, cX, cY, cW, cH);
@@ -872,7 +888,7 @@ public class ChartPanel extends BorderPane {
     // ===================== Siatka =====================
 
     private void drawGrid(GraphicsContext gc, double cX, double cY, double cW, double cH, double priceSpan) {
-        gc.setStroke(GRID);
+        gc.setStroke(gridColor);
         gc.setLineWidth(0.5);
         for (int i = 0; i <= 6; i++) {
             double y = cY + cH * i / 6;
@@ -918,7 +934,7 @@ public class ChartPanel extends BorderPane {
         if (lastVis - firstVis < 2)
             return;
 
-        gc.setStroke(LINE_COLOR);
+        gc.setStroke(lineColor);
         gc.setLineWidth(1.5);
         gc.beginPath();
         boolean first = true;
@@ -1031,11 +1047,11 @@ public class ChartPanel extends BorderPane {
         if (rsiH <= 0) return;
 
         // Tło
-        gc.setFill(BG);
+        gc.setFill(bgColor);
         gc.fillRect(cX, rsiY, cW, rsiH);
 
         // Linia oddzielająca panele
-        gc.setStroke(GRID);
+        gc.setStroke(gridColor);
         gc.setLineWidth(1);
         gc.strokeLine(cX, rsiY, cX + cW, rsiY);
 
@@ -1052,7 +1068,7 @@ public class ChartPanel extends BorderPane {
         gc.fillRect(cX, y30, cW, y0 - y30);
 
         // Linie siatki dla wskaźnika RSI
-        gc.setStroke(GRID);
+        gc.setStroke(gridColor);
         gc.setLineWidth(0.5);
         for (int level : new int[]{0, 30, 50, 70, 100}) {
             double y = rsiY + rsiH * (1 - level / 100.0);
@@ -1083,7 +1099,7 @@ public class ChartPanel extends BorderPane {
             int firstVis = getFirstVisibleIndex();
             int lastVis = getLastVisibleIndex();
 
-            gc.setStroke(Color.WHITE);
+            gc.setStroke(rsiLineColor);
             gc.setLineWidth(1.5);
             gc.beginPath();
             boolean started = false;
@@ -1103,7 +1119,7 @@ public class ChartPanel extends BorderPane {
         gc.restore();
 
         // Podpis osi dla wartości RSI
-        gc.setFill(AXIS_TEXT);
+        gc.setFill(axisTextColor);
         gc.setFont(Font.font("Inter", 9));
         for (int level : new int[]{0, 30, 50, 70, 100}) {
             double y = rsiY + rsiH * (1 - level / 100.0);
@@ -1111,7 +1127,7 @@ public class ChartPanel extends BorderPane {
         }
 
         // Etykieta "RSI(14)"
-        gc.setFill(AXIS_TEXT);
+        gc.setFill(axisTextColor);
         gc.setFont(Font.font("Inter", FontWeight.BOLD, 10));
         gc.fillText("RSI(14)", cX + 4, rsiY + 14);
     }
@@ -1173,11 +1189,11 @@ public class ChartPanel extends BorderPane {
         if (macdH <= 0) return;
 
         // Tło
-        gc.setFill(BG);
+        gc.setFill(bgColor);
         gc.fillRect(cX, macdY, cW, macdH);
 
         // Linia oddzielająca panele
-        gc.setStroke(GRID);
+        gc.setStroke(gridColor);
         gc.setLineWidth(1);
         gc.strokeLine(cX, macdY, cX + cW, macdY);
 
@@ -1214,7 +1230,7 @@ public class ChartPanel extends BorderPane {
         span = hMax - hMin;
 
         // Linie siatki
-        gc.setStroke(GRID);
+        gc.setStroke(gridColor);
         gc.setLineWidth(0.5);
         for (int i = 0; i <= 4; i++) {
             double y = macdY + macdH * i / 4.0;
@@ -1223,7 +1239,7 @@ public class ChartPanel extends BorderPane {
 
         // Przerywana linia zerowa
         double zeroY = macdY + macdH * (hMax / span);
-        gc.setStroke(GRID);
+        gc.setStroke(gridColor);
         gc.setLineWidth(1.0);
         gc.setLineDashes(4, 4);
         gc.strokeLine(cX, zeroY, cX + cW, zeroY);
@@ -1291,8 +1307,8 @@ public class ChartPanel extends BorderPane {
 
         gc.restore();
 
-        // Etykiety osi Y: min, 0, max (12px, AXIS_TEXT, wyrównane do prawej)
-        gc.setFill(AXIS_TEXT);
+        // Etykiety osi Y: min, 0, max (12px, axis text, wyrównane do prawej)
+        gc.setFill(axisTextColor);
         gc.setFont(Font.font("Inter", 12));
         // Max
         gc.fillText(String.format(Locale.US, "%.4f", hMax), cX + cW + 4, macdY + 12);
@@ -1302,7 +1318,7 @@ public class ChartPanel extends BorderPane {
         gc.fillText(String.format(Locale.US, "%.4f", hMin), cX + cW + 4, macdY + macdH);
 
         // Etykieta "MACD(12,26,9)"
-        gc.setFill(AXIS_TEXT);
+        gc.setFill(axisTextColor);
         gc.setFont(Font.font("Inter", FontWeight.BOLD, 10));
         gc.fillText("MACD(12,26,9)", cX + 4, macdY + 14);
     }
@@ -1310,8 +1326,8 @@ public class ChartPanel extends BorderPane {
     // ===================== Rysowanie elementów =====================
 
     private void drawDrawings(GraphicsContext gc, double cX, double cY, double cW, double cH) {
-        gc.setStroke(DRAWING_COLOR);
-        gc.setFill(DRAWING_COLOR);
+        gc.setStroke(drawingColor);
+        gc.setFill(drawingColor);
         gc.setLineWidth(1.5);
         gc.setLineDashes();
 
@@ -1321,13 +1337,13 @@ public class ChartPanel extends BorderPane {
                 double y1 = priceToYInArea(tl.price1(), cY, cH);
                 double x2 = candleIndexToX(tl.candleIdx2(), cX, cW);
                 double y2 = priceToYInArea(tl.price2(), cY, cH);
-                gc.setStroke(DRAWING_COLOR);
+                gc.setStroke(drawingColor);
                 gc.setLineWidth(1.5);
                 gc.strokeLine(x1, y1, x2, y2);
             } else if (obj instanceof DrawingObject.HorizontalLine hl) {
                 double y = priceToYInArea(hl.price(), cY, cH);
                 if (y >= cY && y <= cY + cH) {
-                    gc.setStroke(DRAWING_COLOR);
+                    gc.setStroke(drawingColor);
                     gc.setLineWidth(1.5);
                     gc.strokeLine(cX, y, cX + cW, y);
                     gc.setFont(Font.font("Inter", 10));
@@ -1342,16 +1358,16 @@ public class ChartPanel extends BorderPane {
                 double ry = Math.min(y1, y2);
                 double rw = Math.abs(x2 - x1);
                 double rh = Math.abs(y2 - y1);
-                gc.setStroke(DRAWING_COLOR);
+                gc.setStroke(drawingColor);
                 gc.setLineWidth(2.5);
                 gc.strokeRect(rx, ry, rw, rh);
                 gc.setFill(Color.rgb(255, 255, 255, 0.10));
                 gc.fillRect(rx, ry, rw, rh);
-                gc.setFill(DRAWING_COLOR); // przywrócenie
+                gc.setFill(drawingColor); // przywrócenie
             } else if (obj instanceof DrawingObject.TextLabel tl) {
                 double x = candleIndexToX(tl.candleIdx(), cX, cW);
                 double y = priceToYInArea(tl.price(), cY, cH);
-                gc.setFill(DRAWING_COLOR);
+                gc.setFill(drawingColor);
                 gc.setFont(Font.font("Inter", FontWeight.BOLD, 12));
                 gc.fillText(tl.text(), x, y);
             }
@@ -1366,7 +1382,7 @@ public class ChartPanel extends BorderPane {
         double y1 = priceToYInArea(drawStartPrice, cY, cH);
         double clampedY = Math.max(cY, Math.min(cY + cH, crossY));
 
-        gc.setStroke(DRAWING_COLOR);
+        gc.setStroke(drawingColor);
         gc.setLineWidth(1.5);
         gc.setLineDashes(4, 4);
 
@@ -1480,7 +1496,7 @@ public class ChartPanel extends BorderPane {
         if (crossX < cX || crossX > cX + cW || crossY < cY || crossY > cY + cH)
             return;
 
-        Color crossColor = CROSS;
+        Color crossColor = crosshairColor;
         if (state == ChartState.SELECTING_SL) crossColor = SL_COLOR;
         else if (state == ChartState.SELECTING_TP) crossColor = TP_COLOR;
 
@@ -1492,10 +1508,10 @@ public class ChartPanel extends BorderPane {
         gc.setLineDashes();
 
         double price = yToPriceInArea(crossY, cY, cH);
-        gc.setFill(crossColor.equals(CROSS) ? Color.web("#30363d") : crossColor.deriveColor(1,1,1,0.8));
+        gc.setFill(crossColor.equals(crosshairColor) ? crosshairColor : crossColor.deriveColor(1,1,1,0.8));
         gc.fillRoundRect(cX + cW + 2, crossY - 9, 58, 18, 4, 4);
 
-        gc.setFill(state == ChartState.IDLE ? AXIS_TEXT : Color.WHITE);
+        gc.setFill(state == ChartState.IDLE ? axisTextColor : Color.WHITE);
         gc.setFont(Font.font("Inter", FontWeight.BOLD, 10));
         gc.fillText(formatPrice(price), cX + cW + 6, crossY + 5);
 
@@ -1511,7 +1527,7 @@ public class ChartPanel extends BorderPane {
 
     private void drawAxisLabels(GraphicsContext gc, double cX, double cY, double cW, double cH, double W,
                                 double priceSpan) {
-        gc.setFill(AXIS_TEXT);
+        gc.setFill(axisTextColor);
         gc.setFont(Font.font("Inter", 10));
 
         for (int i = 0; i <= 6; i++) {

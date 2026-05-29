@@ -8,6 +8,8 @@ import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Consumer;
 
 /**
@@ -34,6 +36,9 @@ public class WatchlistPanel extends VBox {
     private final Label detailVol = new Label("—");
     private final Label detailChg = new Label("—");
     private Instrument currentDetail = null;
+    private VBox detailPanel;
+    private final List<Label> detailRowLabels = new ArrayList<>();
+    private boolean darkTheme = MainLayout.isDarkTheme();
 
     public WatchlistPanel(MarketDataService marketData) {
         this.marketData = marketData;
@@ -71,9 +76,10 @@ public class WatchlistPanel extends VBox {
         VBox.setVgrow(listView, Priority.ALWAYS);
 
         //Detail panel
-        VBox detailPanel = buildDetailPanel();
+        detailPanel = buildDetailPanel();
 
         this.getChildren().addAll(title, filters, listView, detailPanel);
+        applyTheme(darkTheme);
     }
 
     /** Expose the ListView for external selection queries. */
@@ -92,18 +98,39 @@ public class WatchlistPanel extends VBox {
             updateDetailPanel(currentDetail);
     }
 
+    public void applyTheme(boolean isDark) {
+        darkTheme = isDark;
+
+        if (detailPanel != null) {
+            detailPanel.setStyle(detailPanelStyle());
+        }
+        for (Label lbl : detailRowLabels) {
+            lbl.setStyle(mutedTextStyle(11, false));
+        }
+
+        detailName.setStyle(mutedTextStyle(11, false));
+        detailBid.setStyle(detailValueStyle("#3fb950"));
+        detailAsk.setStyle(detailValueStyle("#f85149"));
+        detailHigh.setStyle(detailValueStyle(primaryText()));
+        detailLow.setStyle(detailValueStyle(primaryText()));
+        detailOpen.setStyle(detailValueStyle(primaryText()));
+        detailPrev.setStyle(detailValueStyle(primaryText()));
+        detailVol.setStyle(detailValueStyle(mutedText()));
+        detailChg.setStyle(detailValueStyle(primaryText()));
+
+        if (currentDetail != null) {
+            updateDetailPanel(currentDetail);
+        }
+        listView.refresh();
+    }
+
     //Detail panel builder
 
     private VBox buildDetailPanel() {
         Label secTitle = new Label("INSTRUMENT DETAILS");
         secTitle.getStyleClass().add("section-title");
 
-        //Style all detail labels
-        for (Label lbl : new Label[] { detailBid, detailAsk, detailHigh, detailLow,
-                detailOpen, detailPrev, detailVol, detailChg }) {
-            lbl.setStyle("-fx-text-fill: #e6edf3; -fx-font-size: 12px; -fx-font-weight: 600;");
-        }
-        detailName.setStyle("-fx-text-fill: #8b949e; -fx-font-size: 11px;");
+        detailName.setStyle(mutedTextStyle(11, false));
 
         GridPane grid = new GridPane();
         grid.setHgap(8);
@@ -119,15 +146,15 @@ public class WatchlistPanel extends VBox {
 
         VBox panel = new VBox(8, secTitle, detailName, grid);
         panel.setPadding(new Insets(12, 16, 16, 16));
-        panel.setStyle("-fx-background-color: #161b22; -fx-border-color: #21262d; " +
-                "-fx-border-width: 1 0 0 0;");
+        panel.setStyle(detailPanelStyle());
         return panel;
     }
 
     private void addDetailRow(GridPane grid, int row, String label, Label valueLabel, String color) {
         Label lbl = new Label(label);
-        lbl.setStyle("-fx-text-fill: #8b949e; -fx-font-size: 11px;");
-        valueLabel.setStyle("-fx-text-fill: " + color + "; -fx-font-size: 12px; -fx-font-weight: 600;");
+        detailRowLabels.add(lbl);
+        lbl.setStyle(mutedTextStyle(11, false));
+        valueLabel.setStyle(detailValueStyle(themeDetailColor(color)));
         grid.add(lbl, 0, row);
         grid.add(valueLabel, 1, row);
         ColumnConstraints c0 = new ColumnConstraints(90);
@@ -158,8 +185,45 @@ public class WatchlistPanel extends VBox {
         double ch = inst.getChangePercent();
         String sign = ch >= 0 ? "+" : "";
         detailChg.setText(sign + String.format("%.2f%%", ch));
-        detailChg.setStyle("-fx-text-fill: " + (ch >= 0 ? "#3fb950" : "#f85149") +
-                "; -fx-font-size: 12px; -fx-font-weight: 600;");
+        detailChg.setStyle(detailValueStyle(ch >= 0 ? "#3fb950" : "#f85149"));
+    }
+
+    private String detailPanelStyle() {
+        return "-fx-background-color: " + surfaceColor() + "; -fx-border-color: " + borderColor() + "; " +
+                "-fx-border-width: 1 0 0 0;";
+    }
+
+    private String detailValueStyle(String color) {
+        return "-fx-text-fill: " + color + "; -fx-font-size: 12px; -fx-font-weight: 600;";
+    }
+
+    private String mutedTextStyle(int size, boolean bold) {
+        return "-fx-text-fill: " + mutedText() + "; -fx-font-size: " + size + "px;" +
+                (bold ? " -fx-font-weight: 600;" : "");
+    }
+
+    private String themeDetailColor(String darkColor) {
+        return switch (darkColor) {
+            case "#e6edf3" -> primaryText();
+            case "#8b949e" -> mutedText();
+            default -> darkColor;
+        };
+    }
+
+    private String surfaceColor() {
+        return darkTheme ? "#161b22" : "#f6f8fa";
+    }
+
+    private String borderColor() {
+        return darkTheme ? "#21262d" : "#d0d7de";
+    }
+
+    private String primaryText() {
+        return darkTheme ? "#e6edf3" : "#1f2328";
+    }
+
+    private String mutedText() {
+        return darkTheme ? "#8b949e" : "#656d76";
     }
 
     //Private helpers

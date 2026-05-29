@@ -1,0 +1,243 @@
+/* =========================================================
+   Stock Demo - Light Theme
+   ========================================================= */
+
+@import url("styles.css");
+
+.root {
+    -fx-background-color: #ffffff;
+    -fx-font-family: 'Inter', 'Segoe UI', sans-serif;
+    -fx-font-size: 13px;
+}
+
+.scroll-bar:vertical .track,
+.scroll-bar:horizontal .track {
+    -fx-background-color: #f6f8fa;
+}
+
+.scroll-bar:vertical .thumb,
+.scroll-bar:horizontal .thumb {
+    -fx-background-color: #afb8c1;
+}
+
+#watchlistPanel {
+    -fx-background-color: #f6f8fa;
+    -fx-border-color: #d0d7de;
+}
+
+#watchlistTitle,
+.inst-symbol,
+.inst-price,
+#chartSymbolLabel,
+#chartPriceLabel,
+.balance-value,
+.pos-symbol,
+.xtb-vol-btn,
+.xtb-vol-field,
+.xtb-funds-val,
+.xtb-row-val,
+.modal-title,
+.menu-popup-item {
+    -fx-text-fill: #1f2328;
+}
+
+.inst-name,
+.filter-btn,
+.range-btn,
+.chart-type-btn,
+.section-title,
+.xtb-tab-btn,
+.xtb-funds,
+.xtb-row-lbl,
+.target-btn,
+.tab-inactive,
+.drawing-tool-btn,
+.rsi-toggle,
+.modal-close-btn,
+.settings-gear-btn {
+    -fx-text-fill: #656d76;
+}
+
+.filter-btn {
+    -fx-background-color: #eaeef2;
+}
+
+.filter-btn:hover {
+    -fx-background-color: #d0d7de;
+    -fx-text-fill: #1f2328;
+}
+
+.filter-btn-active {
+    -fx-background-color: #1f6feb;
+    -fx-text-fill: #ffffff;
+}
+
+.instrument-list .list-cell {
+    -fx-border-color: transparent transparent #d0d7de transparent;
+}
+
+.instrument-list .list-cell:hover {
+    -fx-background-color: #eaeef2;
+}
+
+.instrument-list .list-cell:selected {
+    -fx-background-color: #dce8f5;
+}
+
+#chartPanel {
+    -fx-background-color: #ffffff;
+}
+
+#chartToolbar {
+    -fx-background-color: #f6f8fa;
+    -fx-border-color: #d0d7de;
+}
+
+.range-btn:hover,
+.chart-type-btn:hover,
+.target-btn:hover,
+.drawing-tool-btn:hover,
+.rsi-toggle:hover,
+.settings-gear-btn:hover,
+.menu-popup-item:hover {
+    -fx-background-color: #eaeef2;
+    -fx-text-fill: #1f2328;
+}
+
+.range-btn-active {
+    -fx-background-color: #1f6feb;
+    -fx-text-fill: #ffffff;
+}
+
+.chart-type-btn,
+.target-btn,
+.drawing-tool-btn,
+.ma-toggle,
+.rsi-toggle,
+.settings-gear-btn {
+    -fx-background-color: #eaeef2;
+    -fx-border-color: #d0d7de;
+}
+
+.chart-type-btn-active,
+.ma-toggle-active,
+.rsi-toggle-active {
+    -fx-background-color: #dce8f5;
+    -fx-text-fill: #1f2328;
+    -fx-border-color: #d0d7de;
+}
+
+#portfolioPanel {
+    -fx-background-color: #f6f8fa;
+    -fx-border-color: #d0d7de;
+}
+
+.portfolio-section {
+    -fx-border-color: transparent transparent #d0d7de transparent;
+}
+
+.trade-field {
+    -fx-background-color: #ffffff;
+    -fx-text-fill: #1f2328;
+    -fx-border-color: #d0d7de;
+}
+
+.positions-list {
+    -fx-background-color: #f6f8fa;
+}
+
+.positions-list .list-cell:filled:hover {
+    -fx-background-color: #eaeef2;
+}
+
+.position-cell {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #d0d7de;
+}
+
+.btn-close-pos {
+    -fx-background-color: #eaeef2;
+    -fx-text-fill: #656d76;
+}
+
+.xtb-tabs {
+    -fx-background-color: #eaeef2;
+}
+
+.xtb-tab-btn-active {
+    -fx-background-color: #dce8f5;
+    -fx-text-fill: #1f2328;
+}
+
+.xtb-volume-box,
+.xtb-vol-left {
+    -fx-border-color: #d0d7de;
+}
+
+.xtb-vol-btn:hover {
+    -fx-background-color: #eaeef2;
+}
+
+.tab-active {
+    -fx-text-fill: #1f2328;
+}
+
+.tab-inactive:hover {
+    -fx-text-fill: #1f2328;
+}
+
+#drawingToolbar {
+    -fx-background-color: #f6f8fa;
+    -fx-border-color: #d0d7de;
+}
+
+.drawing-tool-btn-active {
+    -fx-background-color: #1f6feb;
+    -fx-text-fill: #ffffff;
+}
+
+.ma-toggle:hover {
+    -fx-background-color: #d0d7de;
+}
+
+.modal-panel {
+    -fx-background-color: #f6f8fa;
+    -fx-effect: dropshadow(gaussian, rgba(31,35,40,0.18), 24, 0, 0, 4);
+}
+
+.modal-close-btn {
+    -fx-background-color: #eaeef2;
+}
+
+.modal-close-btn:hover {
+    -fx-background-color: rgba(248, 81, 73, 0.12);
+    -fx-text-fill: #f85149;
+}
+
+.menu-popup {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #d0d7de;
+    -fx-border-width: 1;
+    -fx-effect: dropshadow(gaussian, rgba(31,35,40,0.18), 12, 0, 0, 2);
+}
+
+.settings-panel {
+    -fx-background-color: linear-gradient(to bottom, #f6f8fa, #ffffff);
+    -fx-border-color: #d0d7de;
+    -fx-effect: dropshadow(three-pass-box, rgba(31,35,40,0.16), 15, 0, -4, 0);
+}
+
+.settings-item:hover {
+    -fx-background-color: #eaeef2;
+    -fx-border-color: transparent transparent transparent #1f6feb;
+}
+
+.preferences-row-card {
+    -fx-background-color: #f6f8fa;
+    -fx-border-color: #d0d7de;
+}
+
+.preferences-row-card:hover {
+    -fx-border-color: #afb8c1;
+    -fx-background-color: #eaeef2;
+}

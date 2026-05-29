@@ -18,6 +18,8 @@ import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
@@ -65,9 +67,38 @@ public class MainLayout extends BorderPane {
     private static final Preferences PREFS = Preferences.userNodeForPackage(MainLayout.class);
     private static final String PREF_SOUND_ALERTS = "soundAlerts";
     private static final String PREF_DARK_MODE = "darkMode";
+    private static final String DARK_STYLESHEET = "/styles.css";
+    private static final String LIGHT_STYLESHEET = "/styles-light.css";
+    private static boolean darkTheme = PREFS.getBoolean(PREF_DARK_MODE, true);
+
+    private static final String[][] DARK_TO_LIGHT = {
+            {"#0d1117", "#ffffff"},
+            {"#161b22", "#f6f8fa"},
+            {"#21262d", "#d0d7de"},
+            {"#1c2128", "#eaeef2"},
+            {"#1f3a5f", "#dce8f5"},
+            {"#8b949e", "#656d76"},
+            {"#c9d1d9", "#1f2328"},
+            {"#e6edf3", "#1f2328"},
+            {"#30363d", "#d0d7de"},
+            {"#484f58", "#afb8c1"}
+    };
+
+    private static final String[][] LIGHT_TO_DARK = {
+            {"#ffffff", "#0d1117"},
+            {"#f6f8fa", "#161b22"},
+            {"#d0d7de", "#21262d"},
+            {"#eaeef2", "#1c2128"},
+            {"#dce8f5", "#1f3a5f"},
+            {"#656d76", "#8b949e"},
+            {"#1f2328", "#e6edf3"},
+            {"#afb8c1", "#484f58"}
+    };
 
     public PortfolioService getPortfolio() { return portfolio; }
     public MarketDataService getMarketData() { return marketData; }
+
+    public static boolean isDarkTheme() { return darkTheme; }
 
     public StackPane getAppRoot() { return appRoot; }
     public void setAppRoot(StackPane appRoot) { this.appRoot = appRoot; }
@@ -111,6 +142,105 @@ public class MainLayout extends BorderPane {
         portfolioPanel.setOnMenuRequested(this::showMenu);
         // Podłącz przycisk ustawień (⚙)
         portfolioPanel.setOnSettingsRequested(this::toggleSettings);
+
+        applyTheme(darkTheme);
+        sceneProperty().addListener((obs, oldScene, newScene) -> {
+            if (newScene == null) return;
+            applyTheme(darkTheme);
+            newScene.windowProperty().addListener((windowObs, oldWindow, newWindow) -> {
+                if (newWindow != null) {
+                    applyTheme(darkTheme);
+                }
+            });
+        });
+    }
+
+    public void applyTheme(boolean isDark) {
+        darkTheme = isDark;
+        chartPanel.applyTheme(isDark);
+        watchlistPanel.applyTheme(isDark);
+        portfolioPanel.applyTheme(isDark);
+
+        Scene scene = getScene();
+        if (scene != null) {
+            applySceneStylesheet(scene, isDark);
+            applyInlineTheme(scene.getRoot(), isDark);
+        }
+    }
+
+    private void setDarkTheme(boolean isDark) {
+        PREFS.putBoolean(PREF_DARK_MODE, isDark);
+        applyTheme(isDark);
+    }
+
+    private void applySceneStylesheet(Scene scene, boolean isDark) {
+        String darkUrl = getClass().getResource(DARK_STYLESHEET).toExternalForm();
+        String lightUrl = getClass().getResource(LIGHT_STYLESHEET).toExternalForm();
+        String desired = isDark ? darkUrl : lightUrl;
+
+        scene.getStylesheets().removeAll(darkUrl, lightUrl);
+        scene.getStylesheets().add(desired);
+    }
+
+    private void applyInlineTheme(Node node, boolean isDark) {
+        if (node == null) return;
+
+        String style = node.getStyle();
+        if (style != null && !style.isEmpty()) {
+            node.setStyle(themeStyle(style, isDark));
+        }
+        if (node instanceof ToggleSwitch toggle) {
+            toggle.applyTheme(isDark);
+        }
+        if (node instanceof Parent parent) {
+            for (Node child : parent.getChildrenUnmodifiable()) {
+                applyInlineTheme(child, isDark);
+            }
+        }
+    }
+
+    public static String themeStyle(String style, boolean isDark) {
+        String themed = style;
+        String[][] replacements = isDark ? LIGHT_TO_DARK : DARK_TO_LIGHT;
+        for (String[] pair : replacements) {
+            themed = themed.replace(pair[0], pair[1]);
+        }
+        return themed;
+    }
+
+    private static String primaryText() {
+        return darkTheme ? "#e6edf3" : "#1f2328";
+    }
+
+    private static String secondaryText() {
+        return darkTheme ? "#c9d1d9" : "#1f2328";
+    }
+
+    private static String mutedText() {
+        return darkTheme ? "#8b949e" : "#656d76";
+    }
+
+    private static String panelBg() {
+        return darkTheme ? "#0d1117" : "#ffffff";
+    }
+
+    private static String borderColor() {
+        return darkTheme ? "#21262d" : "#d0d7de";
+    }
+
+    private static String primaryTextStyle(int size, boolean bold) {
+        return "-fx-text-fill: " + primaryText() + "; -fx-font-size: " + size + "px;" +
+                (bold ? " -fx-font-weight: 700;" : "");
+    }
+
+    private static String mutedTextStyle(int size, boolean bold) {
+        return "-fx-text-fill: " + mutedText() + "; -fx-font-size: " + size + "px;" +
+                (bold ? " -fx-font-weight: 700;" : "");
+    }
+
+    private void showModal(String title, Node content) {
+        new ModalOverlay(title, content).showOn(appRoot);
+        applyTheme(darkTheme);
     }
 
     // ===================== SETTINGS SIDEBAR =====================
@@ -136,7 +266,7 @@ public class MainLayout extends BorderPane {
 
         // Header
         Label title = new Label("Settings");
-        title.setStyle("-fx-text-fill: #e6edf3; -fx-font-size: 16px; -fx-font-weight: 700;");
+        title.setStyle(primaryTextStyle(16, true));
         
         SVGPath gearPath = new SVGPath();
         gearPath.setContent("M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z");
@@ -165,7 +295,7 @@ public class MainLayout extends BorderPane {
         HBox header = new HBox(8, headerIcon, title, sp, closeBtn);
         header.setAlignment(Pos.CENTER_LEFT);
         header.setPadding(new Insets(16, 16, 12, 16));
-        header.setStyle("-fx-border-color: transparent transparent #21262d transparent; -fx-border-width: 0 0 1 0;");
+        header.setStyle("-fx-border-color: transparent transparent " + borderColor() + " transparent; -fx-border-width: 0 0 1 0;");
 
         // Items container
         VBox items = new VBox(4);
@@ -194,7 +324,7 @@ public class MainLayout extends BorderPane {
                     "#8957e5", "rgba(137,87,229,0.1)",
                     () -> {
                         closeSettings();
-                        new ModalOverlay("PIT-8C Tax Form Details", buildPit8cFormContent()).showOn(appRoot);
+                        showModal("PIT-8C Tax Form Details", buildPit8cFormContent());
                     }
                 )
         );
@@ -223,7 +353,7 @@ public class MainLayout extends BorderPane {
                     "#3fb950", "rgba(63,185,80,0.1)",
                     () -> {
                         closeSettings();
-                        new ModalOverlay("Set Balance", buildBalanceContent(portfolio)).showOn(appRoot);
+                        showModal("Set Balance", buildBalanceContent(portfolio));
                     }
                 )
         );
@@ -241,7 +371,7 @@ public class MainLayout extends BorderPane {
                     "#bc8cff", "rgba(188,140,255,0.1)",
                     () -> {
                         closeSettings();
-                        new ModalOverlay("Settings", buildSettingsContent()).showOn(appRoot);
+                        showModal("Settings", buildSettingsContent());
                     }
                 ),
                 makeSettingsItem(
@@ -281,6 +411,7 @@ public class MainLayout extends BorderPane {
 
         appRoot.getChildren().add(wrapper);
         settingsWrapper = wrapper;
+        applyTheme(darkTheme);
 
         // Po dodaniu — wymiar jest znany
         Platform.runLater(() -> {
@@ -333,10 +464,10 @@ public class MainLayout extends BorderPane {
         StackPane iconContainer = createIconContainer(pathContent, iconColor, iconBg);
 
         Label lbl = new Label(label);
-        lbl.setStyle("-fx-text-fill: #e6edf3; -fx-font-size: 13px; -fx-font-weight: 600;");
+        lbl.setStyle(primaryTextStyle(13, true));
 
         Label desc = new Label(description);
-        desc.setStyle("-fx-text-fill: #8b949e; -fx-font-size: 11px;");
+        desc.setStyle(mutedTextStyle(11, false));
 
         VBox textContainer = new VBox(2, lbl, desc);
         textContainer.setAlignment(Pos.CENTER_LEFT);
@@ -366,7 +497,7 @@ public class MainLayout extends BorderPane {
         menu.getChildren().addAll(
                 makeMenuItem("\uD83D\uDCCA  Statistics", () -> {
                     closeMenu();
-                    new ModalOverlay("Statistics", buildStatisticsContent(portfolioPanel)).showOn(appRoot);
+                    showModal("Statistics", buildStatisticsContent(portfolioPanel));
                 })
         );
 
@@ -461,7 +592,7 @@ public class MainLayout extends BorderPane {
 
     private HBox buildStatRow(String name, Label valueLabel) {
         Label nameLbl = new Label(name);
-        nameLbl.setStyle("-fx-text-fill: #c9d1d9; -fx-font-size: 14px; -fx-font-weight: 600;");
+        nameLbl.setStyle("-fx-text-fill: " + secondaryText() + "; -fx-font-size: 14px; -fx-font-weight: 600;");
 
         Region sp = new Region();
         HBox.setHgrow(sp, Priority.ALWAYS);
@@ -469,7 +600,7 @@ public class MainLayout extends BorderPane {
         HBox row = new HBox(12, nameLbl, sp, valueLabel);
         row.setAlignment(Pos.CENTER_LEFT);
         row.setPadding(new Insets(12, 8, 12, 8));
-        row.setStyle("-fx-border-color: transparent transparent #21262d transparent; -fx-border-width: 0 0 1 0;");
+        row.setStyle("-fx-border-color: transparent transparent " + borderColor() + " transparent; -fx-border-width: 0 0 1 0;");
         return row;
     }
 
@@ -478,7 +609,7 @@ public class MainLayout extends BorderPane {
         VBox box = new VBox(16);
         box.setPadding(new Insets(20));
         box.setFillWidth(true);
-        box.setStyle("-fx-background-color: #0d1117;");
+        box.setStyle("-fx-background-color: " + panelBg() + ";");
 
         Label generalTitle = new Label("SYSTEM PREFERENCES");
         generalTitle.getStyleClass().add("settings-section-title");
@@ -494,8 +625,8 @@ public class MainLayout extends BorderPane {
         HBox dark = buildToggleRow(
                 "Dark Mode",
                 "Use high-contrast sleek dark UI theme styling",
-                PREFS.getBoolean(PREF_DARK_MODE, true),
-                v -> PREFS.putBoolean(PREF_DARK_MODE, v)
+                darkTheme,
+                this::setDarkTheme
         );
 
         VBox generalSection = new VBox(8, generalTitle, sound, dark);
@@ -517,10 +648,10 @@ public class MainLayout extends BorderPane {
         logo.setScaleY(1.8);
 
         Label appName = new Label("STOCK DEMO");
-        appName.setStyle("-fx-text-fill: #e6edf3; -fx-font-size: 16px; -fx-font-weight: 800; -fx-letter-spacing: 1px;");
+        appName.setStyle("-fx-text-fill: " + primaryText() + "; -fx-font-size: 16px; -fx-font-weight: 800; -fx-letter-spacing: 1px;");
 
         Label desc = new Label("Advanced Trading Simulator Platform");
-        desc.setStyle("-fx-text-fill: #8b949e; -fx-font-size: 11px;");
+        desc.setStyle(mutedTextStyle(11, false));
 
         Label versionChip = new Label("v1.0.0");
         versionChip.setStyle(
@@ -548,10 +679,10 @@ public class MainLayout extends BorderPane {
 
     private HBox buildToggleRow(String label, String desc, boolean initial, Consumer<Boolean> onChange) {
         Label name = new Label(label);
-        name.setStyle("-fx-text-fill: #e6edf3; -fx-font-size: 14px; -fx-font-weight: bold;");
+        name.setStyle(primaryTextStyle(14, true));
 
         Label d = new Label(desc);
-        d.setStyle("-fx-text-fill: #8b949e; -fx-font-size: 11px;");
+        d.setStyle(mutedTextStyle(11, false));
 
         VBox text = new VBox(2, name, d);
 
@@ -872,6 +1003,7 @@ public class MainLayout extends BorderPane {
         private final Rectangle track;
         private final Circle thumb;
         private boolean selected;
+        private boolean darkTheme = MainLayout.isDarkTheme();
         private Consumer<Boolean> onToggleListener;
 
         public ToggleSwitch(boolean initialValue) {
@@ -883,8 +1015,8 @@ public class MainLayout extends BorderPane {
             track = new Rectangle(36, 20);
             track.setArcWidth(20);
             track.setArcHeight(20);
-            track.setFill(Color.web(selected ? "#1f6feb" : "#30363d"));
-            track.setStroke(Color.web("#444c56"));
+            track.setFill(Color.web(selected ? "#1f6feb" : inactiveTrackColor()));
+            track.setStroke(Color.web(trackStrokeColor()));
             track.setStrokeWidth(1);
 
             thumb = new Circle(8);
@@ -898,10 +1030,11 @@ public class MainLayout extends BorderPane {
             setCursor(Cursor.HAND);
 
             setOnMouseClicked(e -> {
-                setSelected(!selected);
+                boolean next = !selected;
                 if (onToggleListener != null) {
-                    onToggleListener.accept(selected);
+                    onToggleListener.accept(next);
                 }
+                setSelected(next);
             });
         }
 
@@ -913,17 +1046,26 @@ public class MainLayout extends BorderPane {
             if (this.selected == value) return;
             this.selected = value;
 
-            TranslateTransition translate = new TranslateTransition(Duration.millis(120), thumb);
-            translate.setToX(selected ? 16 : 0);
-
-            javafx.animation.FillTransition fill = new javafx.animation.FillTransition(Duration.millis(120), track);
-            fill.setToValue(Color.web(selected ? "#1f6feb" : "#30363d"));
-
-            new javafx.animation.ParallelTransition(translate, fill).play();
+            thumb.setTranslateX(selected ? 16 : 0);
+            track.setFill(Color.web(selected ? "#1f6feb" : inactiveTrackColor()));
         }
 
         public void setOnToggle(Consumer<Boolean> listener) {
             this.onToggleListener = listener;
+        }
+
+        public void applyTheme(boolean isDark) {
+            darkTheme = isDark;
+            track.setFill(Color.web(selected ? "#1f6feb" : inactiveTrackColor()));
+            track.setStroke(Color.web(trackStrokeColor()));
+        }
+
+        private String inactiveTrackColor() {
+            return darkTheme ? "#30363d" : "#d0d7de";
+        }
+
+        private String trackStrokeColor() {
+            return darkTheme ? "#444c56" : "#afb8c1";
         }
     }
 }

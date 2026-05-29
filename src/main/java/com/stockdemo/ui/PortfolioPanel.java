@@ -58,6 +58,13 @@ public class PortfolioPanel extends VBox {
     private final Button settingsBtn = new Button();
     private Runnable onMenuRequested;
     private Runnable onSettingsRequested;
+    private boolean darkTheme = MainLayout.isDarkTheme();
+    private SVGPath settingsGearPath;
+    private Label volumeLabel;
+    private Label marginLabel;
+    private Label slFieldLabel;
+    private Label tpFieldLabel;
+    private Button updateSlTpBtn;
 
     public PortfolioPanel(PortfolioService portfolio, ChartPanel chartPanel) {
         this.portfolio = portfolio;
@@ -92,6 +99,7 @@ public class PortfolioPanel extends VBox {
         scrollPane.setStyle("-fx-background-color: transparent; -fx-background: transparent;");
         VBox.setVgrow(scrollPane, Priority.ALWAYS);
         this.getChildren().add(scrollPane);
+        applyTheme(darkTheme);
     }
 
     public void setInstrument(Instrument instrument) {
@@ -140,6 +148,34 @@ public class PortfolioPanel extends VBox {
         this.onSettingsRequested = handler;
     }
 
+    public void applyTheme(boolean isDark) {
+        darkTheme = isDark;
+
+        if (settingsGearPath != null) {
+            settingsGearPath.setFill(Color.web(mutedText()));
+        }
+        if (volumeLabel != null) {
+            volumeLabel.setStyle(primaryTextStyle(11, true));
+        }
+        if (marginLabel != null) {
+            marginLabel.setStyle(mutedTextStyle(10, false));
+        }
+        if (slFieldLabel != null) {
+            slFieldLabel.setStyle(mutedTextStyle(11, false));
+        }
+        if (tpFieldLabel != null) {
+            tpFieldLabel.setStyle(mutedTextStyle(11, false));
+        }
+        marginValueLbl.setStyle(mutedTextStyle(11, false));
+        if (updateSlTpBtn != null) {
+            updateSlTpBtn.setStyle(updateSlTpButtonStyle());
+        }
+
+        positionsList.refresh();
+        historyList.refresh();
+        refreshStats();
+    }
+
     private void buildAccountSection() {
         Label sectionTitle = new Label("ACCOUNT");
         sectionTitle.getStyleClass().add("section-title");
@@ -154,7 +190,8 @@ public class PortfolioPanel extends VBox {
         // Przycisk ustawień (⚙) obok menu
         SVGPath gearPath = new SVGPath();
         gearPath.setContent("M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z");
-        gearPath.setFill(Color.web("#8b949e"));
+        settingsGearPath = gearPath;
+        gearPath.setFill(Color.web(mutedText()));
         
         // Wrap the SVGPath in a StackPane and give it a small size so it doesn't take up too much layout space.
         StackPane iconContainer = new StackPane(gearPath);
@@ -173,8 +210,8 @@ public class PortfolioPanel extends VBox {
             if (onSettingsRequested != null) onSettingsRequested.run();
         });
         
-        settingsBtn.setOnMouseEntered(e -> gearPath.setFill(Color.web("#e6edf3")));
-        settingsBtn.setOnMouseExited(e -> gearPath.setFill(Color.web("#8b949e")));
+        settingsBtn.setOnMouseEntered(e -> gearPath.setFill(Color.web(primaryText())));
+        settingsBtn.setOnMouseExited(e -> gearPath.setFill(Color.web(mutedText())));
 
         Region headerSpacer = new Region();
         HBox.setHgrow(headerSpacer, Priority.ALWAYS);
@@ -183,7 +220,7 @@ public class PortfolioPanel extends VBox {
 
         balanceLabel.getStyleClass().add("balance-value");
         equityLabel.getStyleClass().add("equity-value");
-        pnlLabel.setStyle("-fx-text-fill: #8b949e; -fx-font-size: 12px;");
+        pnlLabel.setStyle(mutedTextStyle(12, false));
 
         VBox section = new VBox(6, header, balanceLabel, equityLabel, pnlLabel);
         section.getStyleClass().add("portfolio-section");
@@ -205,11 +242,11 @@ public class PortfolioPanel extends VBox {
         VBox volLeft = new VBox(2);
         volLeft.getStyleClass().add("xtb-vol-left");
         volLeft.setAlignment(Pos.CENTER_LEFT);
-        Label volLbl = new Label("Volume");
-        volLbl.setStyle("-fx-text-fill: white; -fx-font-size: 11px; -fx-font-weight: bold;");
-        Label marLbl = new Label("Margin");
-        marLbl.setStyle("-fx-text-fill: #8b949e; -fx-font-size: 10px;");
-        volLeft.getChildren().addAll(volLbl, marLbl);
+        volumeLabel = new Label("Volume");
+        volumeLabel.setStyle(primaryTextStyle(11, true));
+        marginLabel = new Label("Margin");
+        marginLabel.setStyle(mutedTextStyle(10, false));
+        volLeft.getChildren().addAll(volumeLabel, marginLabel);
 
         HBox volRight = new HBox();
         volRight.setAlignment(Pos.CENTER);
@@ -224,7 +261,7 @@ public class PortfolioPanel extends VBox {
 
         VBox centerVal = new VBox(0, qtyField, marginValueLbl);
         centerVal.setAlignment(Pos.CENTER);
-        marginValueLbl.setStyle("-fx-text-fill: #8b949e; -fx-font-size: 11px;");
+        marginValueLbl.setStyle(mutedTextStyle(11, false));
 
         Button plusBtn = new Button("+");
         plusBtn.getStyleClass().add("xtb-vol-btn");
@@ -238,8 +275,8 @@ public class PortfolioPanel extends VBox {
         
         VBox slBox = new VBox(5);
         HBox.setHgrow(slBox, Priority.ALWAYS);
-        Label slFieldLbl = new Label("Stop Loss");
-        slFieldLbl.setStyle("-fx-text-fill: #8b949e; -fx-font-size: 11px;");
+        slFieldLabel = new Label("Stop Loss");
+        slFieldLabel.setStyle(mutedTextStyle(11, false));
         
         HBox slInputBox = new HBox(2);
         slField.getStyleClass().addAll("trade-field", "sl-field");
@@ -257,12 +294,12 @@ public class PortfolioPanel extends VBox {
             });
         });
         slInputBox.getChildren().addAll(slField, slTargetBtn);
-        slBox.getChildren().addAll(slFieldLbl, slInputBox);
+        slBox.getChildren().addAll(slFieldLabel, slInputBox);
 
         VBox tpBox = new VBox(5);
         HBox.setHgrow(tpBox, Priority.ALWAYS);
-        Label tpFieldLbl = new Label("Take Profit");
-        tpFieldLbl.setStyle("-fx-text-fill: #8b949e; -fx-font-size: 11px;");
+        tpFieldLabel = new Label("Take Profit");
+        tpFieldLabel.setStyle(mutedTextStyle(11, false));
         
         HBox tpInputBox = new HBox(2);
         tpField.getStyleClass().addAll("trade-field", "tp-field");
@@ -280,12 +317,12 @@ public class PortfolioPanel extends VBox {
             });
         });
         tpInputBox.getChildren().addAll(tpField, tpTargetBtn);
-        tpBox.getChildren().addAll(tpFieldLbl, tpInputBox);
+        tpBox.getChildren().addAll(tpFieldLabel, tpInputBox);
 
         slTpRow.getChildren().addAll(slBox, tpBox);
         
-        Button updateSlTpBtn = new Button("Update Open Position SL/TP");
-        updateSlTpBtn.setStyle("-fx-background-color: #21262d; -fx-text-fill: white; -fx-border-color: #30363d; -fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 6 12; -fx-font-weight: bold; -fx-cursor: hand;");
+        updateSlTpBtn = new Button("Update Open Position SL/TP");
+        updateSlTpBtn.setStyle(updateSlTpButtonStyle());
         updateSlTpBtn.setMaxWidth(Double.MAX_VALUE);
         updateSlTpBtn.setOnAction(e -> {
             double sl = parseDouble(slField.getText());
@@ -395,6 +432,44 @@ public class PortfolioPanel extends VBox {
     public Label getLabelWorstTrade() { return worstTradeLbl; }
     public Label getLabelAvgPnl()     { return avgPnlLbl; }
 
+    private String updateSlTpButtonStyle() {
+        return "-fx-background-color: " + controlBg() + "; " +
+                "-fx-text-fill: " + primaryText() + "; " +
+                "-fx-border-color: " + borderColor() + "; " +
+                "-fx-border-radius: 4; -fx-background-radius: 4; " +
+                "-fx-padding: 6 12; -fx-font-weight: bold; -fx-cursor: hand;";
+    }
+
+    private String primaryTextStyle(int size, boolean bold) {
+        return "-fx-text-fill: " + primaryText() + "; -fx-font-size: " + size + "px;" +
+                (bold ? " -fx-font-weight: bold;" : "");
+    }
+
+    private String mutedTextStyle(int size, boolean bold) {
+        return "-fx-text-fill: " + mutedText() + "; -fx-font-size: " + size + "px;" +
+                (bold ? " -fx-font-weight: bold;" : "");
+    }
+
+    private String surfaceColor() {
+        return darkTheme ? "#161b22" : "#f6f8fa";
+    }
+
+    private String controlBg() {
+        return darkTheme ? "#21262d" : "#eaeef2";
+    }
+
+    private String borderColor() {
+        return darkTheme ? "#30363d" : "#d0d7de";
+    }
+
+    private String primaryText() {
+        return darkTheme ? "#e6edf3" : "#1f2328";
+    }
+
+    private String mutedText() {
+        return darkTheme ? "#8b949e" : "#656d76";
+    }
+
     private void refreshStats() {
         var list = portfolio.closedPositions;
         if (list.isEmpty()) {
@@ -403,7 +478,7 @@ public class PortfolioPanel extends VBox {
             bestTradeLbl.setText("—");
             worstTradeLbl.setText("—");
             avgPnlLbl.setText("—");
-            String neutral = "-fx-text-fill: #8b949e; -fx-font-size: 12px; -fx-font-weight: bold;";
+            String neutral = mutedTextStyle(12, true);
             winRateLbl.setStyle(neutral);
             totalPnlLbl.setStyle(neutral);
             bestTradeLbl.setStyle(neutral);
@@ -533,12 +608,12 @@ public class PortfolioPanel extends VBox {
         toast.setMaxWidth(320);
         toast.setMinWidth(260);
         toast.setStyle(
-            "-fx-background-color: #161b22;" +
-            "-fx-border-color: #30363d;" +
+            "-fx-background-color: " + surfaceColor() + ";" +
+            "-fx-border-color: " + borderColor() + ";" +
             "-fx-border-width: 1;" +
             "-fx-border-radius: 8;" +
             "-fx-background-radius: 8;" +
-            "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.45), 16, 0, 0, 4);"
+            "-fx-effect: dropshadow(gaussian, " + (darkTheme ? "rgba(0,0,0,0.45)" : "rgba(31,35,40,0.18)") + ", 16, 0, 0, 4);"
         );
         toast.setMouseTransparent(false);
 
@@ -546,12 +621,12 @@ public class PortfolioPanel extends VBox {
         HBox header = new HBox();
         header.setAlignment(Pos.CENTER_LEFT);
         Label titleLabel = new Label(title);
-        titleLabel.setStyle("-fx-text-fill: #e6edf3; -fx-font-size: 13px; -fx-font-weight: bold;");
+        titleLabel.setStyle(primaryTextStyle(13, true));
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
         Button closeBtn = new Button("✕");
         closeBtn.setStyle(
-            "-fx-background-color: transparent; -fx-text-fill: #8b949e;" +
+            "-fx-background-color: transparent; -fx-text-fill: " + mutedText() + ";" +
             "-fx-font-size: 13px; -fx-padding: 0 0 0 8; -fx-cursor: hand;"
         );
         closeBtn.setOnMouseEntered(e -> closeBtn.setStyle(
@@ -559,14 +634,14 @@ public class PortfolioPanel extends VBox {
             "-fx-font-size: 13px; -fx-padding: 0 0 0 8; -fx-cursor: hand;"
         ));
         closeBtn.setOnMouseExited(e -> closeBtn.setStyle(
-            "-fx-background-color: transparent; -fx-text-fill: #8b949e;" +
+            "-fx-background-color: transparent; -fx-text-fill: " + mutedText() + ";" +
             "-fx-font-size: 13px; -fx-padding: 0 0 0 8; -fx-cursor: hand;"
         ));
         header.getChildren().addAll(titleLabel, spacer, closeBtn);
 
         // --- Message body ---
         Label msgLabel = new Label(msg);
-        msgLabel.setStyle("-fx-text-fill: #8b949e; -fx-font-size: 12px;");
+        msgLabel.setStyle(mutedTextStyle(12, false));
         msgLabel.setWrapText(true);
 
         // --- Progress bar (countdown indicator) ---
@@ -648,7 +723,7 @@ public class PortfolioPanel extends VBox {
             symLabel.getStyleClass().add("pos-symbol");
             pnlLabel.getStyleClass().add("pos-pnl-positive");
             closeBtn.getStyleClass().add("btn-close-pos");
-            infoLabel.setStyle("-fx-text-fill: #8b949e; -fx-font-size: 10px;");
+            infoLabel.setStyle(mutedTextStyle(10, false));
             infoLabel.setMaxWidth(Double.MAX_VALUE);
             infoLabel.setWrapText(true);
             dirLabel.setStyle("-fx-font-size: 11px; -fx-font-weight: 700;");
@@ -690,6 +765,7 @@ public class PortfolioPanel extends VBox {
             }
 
             symLabel.setText(pos.getInstrument().getSymbol());
+            infoLabel.setStyle(mutedTextStyle(10, false));
             dirLabel.setText(pos.isLong() ? "▲ BUY" : "▼ SELL");
             dirLabel.setStyle("-fx-text-fill: " + (pos.isLong() ? "#3fb950" : "#f85149")
                     + "; -fx-font-size: 11px; -fx-font-weight: 700;");
@@ -724,10 +800,10 @@ public class PortfolioPanel extends VBox {
         ClosedPositionCell() {
             symLabel.getStyleClass().add("pos-symbol");
             pnlLabel.getStyleClass().add("pos-pnl-positive");
-            infoLabel.setStyle("-fx-text-fill: #8b949e; -fx-font-size: 10px;");
+            infoLabel.setStyle(mutedTextStyle(10, false));
             infoLabel.setMaxWidth(Double.MAX_VALUE);
             infoLabel.setWrapText(true);
-            dateLabel.setStyle("-fx-text-fill: #8b949e; -fx-font-size: 10px;");
+            dateLabel.setStyle(mutedTextStyle(10, false));
             dirLabel.setStyle("-fx-font-size: 11px; -fx-font-weight: 700;");
 
             Region sp = new Region();
@@ -757,8 +833,10 @@ public class PortfolioPanel extends VBox {
             }
 
             symLabel.setText(pos.instrument().getSymbol());
+            infoLabel.setStyle(mutedTextStyle(10, false));
+            dateLabel.setStyle(mutedTextStyle(10, false));
             dirLabel.setText(pos.isLong() ? "▲ BUY" : "▼ SELL");
-            dirLabel.setStyle("-fx-text-fill: #8b949e; -fx-font-size: 11px; -fx-font-weight: 700;");
+            dirLabel.setStyle(mutedTextStyle(11, true));
 
             double pnl = pos.realizedPnl();
             String sign = pnl >= 0 ? "+" : "";
