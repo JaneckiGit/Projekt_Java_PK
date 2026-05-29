@@ -98,7 +98,9 @@ public class YahooFinanceApi {
             JSONArray vols   = q.optJSONArray("volume");
 
             for (int i = 0; i < timestamps.length(); i++) {
-                if (closes.isNull(i) || opens.isNull(i)) continue;
+                if (closes.isNull(i) || opens.isNull(i)) {
+                    continue;
+                }
                 long ts     = timestamps.getLong(i);
                 double open  = opens.optDouble(i, 0);
                 double high  = highs.optDouble(i, 0);

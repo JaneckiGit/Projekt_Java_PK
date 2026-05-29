@@ -53,7 +53,9 @@ public class Position {
      */
     public void updatePnl() {
         double currentPrice = instrument.getPrice();
-        if (currentPrice == 0) return;
+        if (currentPrice == 0) {
+            return;
+        }
 
         double rawPnl;
         if (isLong) {

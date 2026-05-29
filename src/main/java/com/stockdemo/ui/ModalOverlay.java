@@ -102,8 +102,12 @@ public class ModalOverlay extends StackPane {
     private void updatePanelSize(double sceneW, double sceneH) {
         double w = Math.min(sceneW - 120, 680);
         double h = Math.min(sceneH - 100, 560);
-        if (w < 200) w = Math.max(200, sceneW - 40);
-        if (h < 200) h = Math.max(200, sceneH - 40);
+        if (w < 200) {
+            w = Math.max(200, sceneW - 40);
+        }
+        if (h < 200) {
+            h = Math.max(200, sceneH - 40);
+        }
         panel.setMinWidth(w);
         panel.setPrefWidth(w);
         panel.setMaxWidth(w);
@@ -114,7 +118,9 @@ public class ModalOverlay extends StackPane {
 
     /** Dodaje overlay do podanego StackPane i odtwarza animację wejścia. */
     public void showOn(StackPane root) {
-        if (root == null) return;
+        if (root == null) {
+            return;
+        }
         if (!root.getChildren().contains(this)) {
             root.getChildren().add(this);
         }
@@ -144,7 +150,9 @@ public class ModalOverlay extends StackPane {
 
     /** Uruchamia animację zamknięcia i usuwa overlay z rodzica. */
     public void close() {
-        if (closing) return;
+        if (closing) {
+            return;
+        }
         closing = true;
 
         FadeTransition fade = new FadeTransition(ANIM_DURATION, this);

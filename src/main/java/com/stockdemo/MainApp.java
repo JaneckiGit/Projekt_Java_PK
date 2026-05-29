@@ -1,6 +1,7 @@
 package com.stockdemo;
 
 import com.stockdemo.ui.MainLayout;
+import com.stockdemo.service.PortfolioPersistence;
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.scene.layout.StackPane;
@@ -22,7 +23,7 @@ public class MainApp {
             scene.getStylesheets().add(
                     getClass().getResource("/styles.css").toExternalForm());
 
-            com.stockdemo.service.PortfolioPersistence.load(root.getPortfolio(), root.getMarketData());
+            PortfolioPersistence.load(root.getPortfolio(), root.getMarketData());
 
             stage.setTitle("Stock Demo — Trading Platform");
             stage.setScene(scene);
@@ -30,7 +31,7 @@ public class MainApp {
             stage.setMinHeight(600);
 
             stage.setOnCloseRequest(e -> {
-                com.stockdemo.service.PortfolioPersistence.save(root.getPortfolio());
+                PortfolioPersistence.save(root.getPortfolio());
             });
 
             stage.show();

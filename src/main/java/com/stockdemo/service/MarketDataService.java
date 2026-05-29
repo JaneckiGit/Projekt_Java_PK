@@ -87,7 +87,9 @@ public class MarketDataService {
                 .toList();
         scheduler.scheduleAtFixedRate(() -> {
             cryptoList.forEach(inst -> updatePriceSafely(inst, binance::updatePrice, "Poll-Crypto"));
-            if (onUpdate != null) Platform.runLater(onUpdate);
+            if (onUpdate != null) {
+                Platform.runLater(onUpdate);
+            }
         }, 0, 2, TimeUnit.SECONDS);
 
         //Stocks/CFD timer (every 5 seconds)
@@ -96,7 +98,9 @@ public class MarketDataService {
                 .toList();
         scheduler.scheduleAtFixedRate(() -> {
             stocksCfdList.forEach(inst -> updatePriceSafely(inst, yahoo::updatePrice, "Poll-Stock"));
-            if (onUpdate != null) Platform.runLater(onUpdate);
+            if (onUpdate != null) {
+                Platform.runLater(onUpdate);
+            }
         }, 1, 5, TimeUnit.SECONDS);
     }
 

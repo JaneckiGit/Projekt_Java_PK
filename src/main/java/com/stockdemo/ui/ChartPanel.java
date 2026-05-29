@@ -154,8 +154,9 @@ public class ChartPanel extends BorderPane {
         for (String r : new String[] { "1D", "1T", "1M", "3M", "1R", "5R" }) {
             Button btn = new Button(r);
             btn.getStyleClass().add("range-btn");
-            if (r.equals(activeRange))
+            if (r.equals(activeRange)) {
                 btn.getStyleClass().add("range-btn-active");
+            }
             btn.setOnAction(e -> {
                 ranges.getChildren().forEach(n -> n.getStyleClass().removeAll("range-btn-active"));
                 btn.getStyleClass().add("range-btn-active");
@@ -179,10 +180,11 @@ public class ChartPanel extends BorderPane {
             showCandles = selected;
             btnCandle.getStyleClass().removeAll("chart-type-btn-active");
             btnLine.getStyleClass().removeAll("chart-type-btn-active");
-            if (selected)
+            if (selected) {
                 btnCandle.getStyleClass().add("chart-type-btn-active");
-            else
+            } else {
                 btnLine.getStyleClass().add("chart-type-btn-active");
+            }
             redraw();
         });
 
@@ -193,7 +195,9 @@ public class ChartPanel extends BorderPane {
         btnMA20.selectedProperty().addListener((o, old, sel) -> {
             showMA20 = sel;
             btnMA20.getStyleClass().removeAll("ma-toggle-active");
-            if (sel) btnMA20.getStyleClass().add("ma-toggle-active");
+            if (sel) {
+                btnMA20.getStyleClass().add("ma-toggle-active");
+            }
             redraw();
         });
 
@@ -203,7 +207,9 @@ public class ChartPanel extends BorderPane {
         btnMA50.selectedProperty().addListener((o, old, sel) -> {
             showMA50 = sel;
             btnMA50.getStyleClass().removeAll("ma-toggle-active");
-            if (sel) btnMA50.getStyleClass().add("ma-toggle-active");
+            if (sel) {
+                btnMA50.getStyleClass().add("ma-toggle-active");
+            }
             redraw();
         });
 
@@ -213,7 +219,9 @@ public class ChartPanel extends BorderPane {
         btnRSI.selectedProperty().addListener((o, old, sel) -> {
             showRSI = sel;
             btnRSI.getStyleClass().removeAll("rsi-toggle-active");
-            if (sel) btnRSI.getStyleClass().add("rsi-toggle-active");
+            if (sel) {
+                btnRSI.getStyleClass().add("rsi-toggle-active");
+            }
             redraw();
         });
 
@@ -223,7 +231,9 @@ public class ChartPanel extends BorderPane {
         btnMACD.selectedProperty().addListener((o, old, sel) -> {
             showMACD = sel;
             btnMACD.getStyleClass().removeAll("rsi-toggle-active");
-            if (sel) btnMACD.getStyleClass().add("rsi-toggle-active");
+            if (sel) {
+                btnMACD.getStyleClass().add("rsi-toggle-active");
+            }
             redraw();
         });
 
@@ -272,7 +282,9 @@ public class ChartPanel extends BorderPane {
 
         // ── Zoom (scroll wheel) ────────────────────────────────
         canvas.setOnScroll(e -> {
-            if (candles.isEmpty()) return;
+            if (candles.isEmpty()) {
+                return;
+            }
             int n = candles.size();
             int current = viewCandleCount <= 0 ? n : viewCandleCount;
             int delta = (int) Math.max(1, current * 0.1);
@@ -405,10 +417,14 @@ public class ChartPanel extends BorderPane {
                 draggedPosTP.setTakeProfit(price);
             } else if (draggingPendingSL) {
                 pendingSlPrice = price;
-                if (onPendingSlTpChanged != null) onPendingSlTpChanged.run();
+                if (onPendingSlTpChanged != null) {
+                    onPendingSlTpChanged.run();
+                }
             } else if (draggingPendingTP) {
                 pendingTpPrice = price;
-                if (onPendingSlTpChanged != null) onPendingSlTpChanged.run();
+                if (onPendingSlTpChanged != null) {
+                    onPendingSlTpChanged.run();
+                }
             }
             redraw();
         });
@@ -456,7 +472,9 @@ public class ChartPanel extends BorderPane {
             Button btn = new Button(t[0]);
             btn.getStyleClass().add("drawing-tool-btn");
             btn.setTooltip(new Tooltip(t[2]));
-            if (t[1].equals("NONE")) btn.getStyleClass().add("drawing-tool-btn-active");
+            if (t[1].equals("NONE")) {
+                btn.getStyleClass().add("drawing-tool-btn-active");
+            }
             DrawingTool tool = DrawingTool.valueOf(t[1]);
             btn.setOnAction(e -> selectDrawingTool(tool));
             drawingBtns.add(btn);
@@ -520,7 +538,9 @@ public class ChartPanel extends BorderPane {
     }
 
     private void handleDrawingClick(double mx, double my) {
-        if (candles.isEmpty()) return;
+        if (candles.isEmpty()) {
+            return;
+        }
 
         double W = canvas.getWidth();
         double H = canvas.getHeight();
@@ -529,7 +549,9 @@ public class ChartPanel extends BorderPane {
         double cW = W - PAD_LEFT - PAD_RIGHT;
 
         // Obsługuj kliknięcia tylko wewnątrz obszaru wykresu
-        if (my < PAD_TOP || my > PAD_TOP + cH) return;
+        if (my < PAD_TOP || my > PAD_TOP + cH) {
+            return;
+        }
 
         int candleIdx = xToCandleIndex(mx, cX, cW);
         double price = yToPriceInArea(my, PAD_TOP, cH);
@@ -630,8 +652,9 @@ public class ChartPanel extends BorderPane {
 
 
     public void refreshPrice(Instrument inst) {
-        if (inst == null || currentInstrument == null || !inst.getSymbol().equals(currentInstrument.getSymbol()))
+        if (inst == null || currentInstrument == null || !inst.getSymbol().equals(currentInstrument.getSymbol())) {
             return;
+        }
         double p = inst.getPrice();
         double ch = inst.getChangePercent();
         priceLabel.setText(formatPrice(p));
@@ -666,8 +689,9 @@ public class ChartPanel extends BorderPane {
     // ===================== Ładowanie wykresu =====================
 
     private void loadChart() {
-        if (currentInstrument == null)
+        if (currentInstrument == null) {
             return;
+        }
         drawings.clear();
         drawStartCandleIdx = -1;
         drawStartPrice = -1;
@@ -703,7 +727,9 @@ public class ChartPanel extends BorderPane {
 
     /** Zwraca liczbę widocznych świec z uwzględnieniem viewCandleCount */
     private int getVisibleCandleCount() {
-        if (viewCandleCount <= 0 || viewCandleCount >= candles.size()) return candles.size();
+        if (viewCandleCount <= 0 || viewCandleCount >= candles.size()) {
+            return candles.size();
+        }
         return viewCandleCount;
     }
 
@@ -723,8 +749,12 @@ public class ChartPanel extends BorderPane {
     /** Zwraca wysokość obszaru wykresu (bez uwzględnienia paneli RSI/MACD) */
     private double getChartAreaH(double totalH) {
         double available = totalH - PAD_TOP - PAD_BOT;
-        if (showRSI && showMACD) return available * 0.55;
-        if (showRSI || showMACD) return available * 0.70;
+        if (showRSI && showMACD) {
+            return available * 0.55;
+        }
+        if (showRSI || showMACD) {
+            return available * 0.70;
+        }
         return available;
     }
 
@@ -779,8 +809,9 @@ public class ChartPanel extends BorderPane {
     // ===================== Główne odświeżanie (Redraw) =====================
 
     private void redraw() {
-        if (canvas.getWidth() <= 0 || canvas.getHeight() <= 0)
+        if (canvas.getWidth() <= 0 || canvas.getHeight() <= 0) {
             return;
+        }
         GraphicsContext gc = canvas.getGraphicsContext2D();
         double W = canvas.getWidth();
         double H = canvas.getHeight();
@@ -802,12 +833,18 @@ public class ChartPanel extends BorderPane {
         maxPrice = Double.MIN_VALUE;
         for (int i = firstVis; i < lastVis; i++) {
             Candle c = candles.get(i);
-            if (c.low() < minPrice) minPrice = c.low();
-            if (c.high() > maxPrice) maxPrice = c.high();
+            if (c.low() < minPrice) {
+                minPrice = c.low();
+            }
+            if (c.high() > maxPrice) {
+                maxPrice = c.high();
+            }
         }
         if (minPrice == Double.MAX_VALUE) { minPrice = 0; maxPrice = 1; }
         double baseSpan = maxPrice - minPrice;
-        if (baseSpan == 0) baseSpan = 1;
+        if (baseSpan == 0) {
+            baseSpan = 1;
+        }
         minPrice -= baseSpan * 0.05;
         maxPrice += baseSpan * 0.05;
 
@@ -827,14 +864,19 @@ public class ChartPanel extends BorderPane {
         gc.clip();
 
         drawGrid(gc, cX, cY, cW, cH, priceSpan);
-        if (showCandles)
+        if (showCandles) {
             drawCandles(gc, cX, cY, cW, cH);
-        else
+        } else {
             drawLine(gc, cX, cY, cW, cH);
+        }
 
         // Wskaźniki MA
-        if (showMA20) drawMA(gc, cX, cY, cW, cH, 20, MA20_COLOR);
-        if (showMA50) drawMA(gc, cX, cY, cW, cH, 50, MA50_COLOR);
+        if (showMA20) {
+            drawMA(gc, cX, cY, cW, cH, 20, MA20_COLOR);
+        }
+        if (showMA50) {
+            drawMA(gc, cX, cY, cW, cH, 50, MA50_COLOR);
+        }
 
         drawPositions(gc, cX, cY, cW, cH);
         drawPendingLines(gc, cX, cY, cW, cH);
@@ -915,8 +957,9 @@ public class ChartPanel extends BorderPane {
     private void drawLine(GraphicsContext gc, double cX, double cY, double cW, double cH) {
         int firstVis = getFirstVisibleIndex();
         int lastVis = getLastVisibleIndex();
-        if (lastVis - firstVis < 2)
+        if (lastVis - firstVis < 2) {
             return;
+        }
 
         gc.setStroke(LINE_COLOR);
         gc.setLineWidth(1.5);
@@ -939,7 +982,9 @@ public class ChartPanel extends BorderPane {
 
     private void drawMA(GraphicsContext gc, double cX, double cY, double cW, double cH, int period, Color color) {
         int n = candles.size();
-        if (n < period) return;
+        if (n < period) {
+            return;
+        }
 
         int firstVis = getFirstVisibleIndex();
         int lastVis = getLastVisibleIndex();
@@ -984,7 +1029,9 @@ public class ChartPanel extends BorderPane {
     private double[] computeRSI(int period) {
         int n = candles.size();
         double[] rsi = new double[n];
-        if (n <= period) return rsi;
+        if (n <= period) {
+            return rsi;
+        }
 
         // Obliczenie różnic (zmian) ceny
         double[] gains = new double[n];
@@ -1028,7 +1075,9 @@ public class ChartPanel extends BorderPane {
     }
 
     private void drawRSIPanel(GraphicsContext gc, double rsiY, double rsiH, double cX, double cW) {
-        if (rsiH <= 0) return;
+        if (rsiH <= 0) {
+            return;
+        }
 
         // Tło
         gc.setFill(BG);
@@ -1125,7 +1174,9 @@ public class ChartPanel extends BorderPane {
     private double[][] computeMACD() {
         int n = candles.size();
         double[][] result = new double[3][n];
-        if (n < 2) return result;
+        if (n < 2) {
+            return result;
+        }
 
         // EMA-12 (running initialization from first candle)
         double[] ema12 = new double[n];
@@ -1170,7 +1221,9 @@ public class ChartPanel extends BorderPane {
     }
 
     private void drawMACDPanel(GraphicsContext gc, double macdY, double macdH, double cX, double cW) {
-        if (macdH <= 0) return;
+        if (macdH <= 0) {
+            return;
+        }
 
         // Tło
         gc.setFill(BG);
@@ -1188,7 +1241,9 @@ public class ChartPanel extends BorderPane {
         double[] histogram = macdData[2];
         int n = candles.size();
         int macdStart = 0;
-        if (n < 2) return;
+        if (n < 2) {
+            return;
+        }
 
         // Auto-skala na podstawie histogramu widocznych świec
         int firstVis = getFirstVisibleIndex();
@@ -1198,16 +1253,30 @@ public class ChartPanel extends BorderPane {
             double v = histogram[i];
             double ml = macdLine[i];
             double sl = signalLine[i];
-            if (v < hMin) hMin = v;
-            if (v > hMax) hMax = v;
-            if (ml < hMin) hMin = ml;
-            if (ml > hMax) hMax = ml;
-            if (sl < hMin) hMin = sl;
-            if (sl > hMax) hMax = sl;
+            if (v < hMin) {
+                hMin = v;
+            }
+            if (v > hMax) {
+                hMax = v;
+            }
+            if (ml < hMin) {
+                hMin = ml;
+            }
+            if (ml > hMax) {
+                hMax = ml;
+            }
+            if (sl < hMin) {
+                hMin = sl;
+            }
+            if (sl > hMax) {
+                hMax = sl;
+            }
         }
         if (hMin == Double.MAX_VALUE) { hMin = -1; hMax = 1; }
         double span = hMax - hMin;
-        if (span == 0) span = 1;
+        if (span == 0) {
+            span = 1;
+        }
         // 10% padding
         hMin -= span * 0.10;
         hMax += span * 0.10;
@@ -1359,8 +1428,12 @@ public class ChartPanel extends BorderPane {
     }
 
     private void drawTempDrawing(GraphicsContext gc, double cX, double cY, double cW, double cH) {
-        if (drawStartCandleIdx < 0 || crossX < 0 || crossY < 0) return;
-        if (activeTool != DrawingTool.TREND_LINE && activeTool != DrawingTool.RECTANGLE) return;
+        if (drawStartCandleIdx < 0 || crossX < 0 || crossY < 0) {
+            return;
+        }
+        if (activeTool != DrawingTool.TREND_LINE && activeTool != DrawingTool.RECTANGLE) {
+            return;
+        }
 
         double x1 = candleIndexToX(drawStartCandleIdx, cX, cW);
         double y1 = priceToYInArea(drawStartPrice, cY, cH);
@@ -1385,10 +1458,14 @@ public class ChartPanel extends BorderPane {
     // ===================== Pozycje =====================
 
     private void drawPositions(GraphicsContext gc, double cX, double cY, double cW, double cH) {
-        if (currentInstrument == null) return;
+        if (currentInstrument == null) {
+            return;
+        }
 
         for (Position p : openPositions) {
-            if (!p.getInstrument().getSymbol().equals(currentInstrument.getSymbol())) continue;
+            if (!p.getInstrument().getSymbol().equals(currentInstrument.getSymbol())) {
+                continue;
+            }
 
             // Rysowanie poziomej linii ceny wejścia (Entry)
             double entryY = priceToYInArea(p.getEntryPrice(), cY, cH);
@@ -1477,12 +1554,16 @@ public class ChartPanel extends BorderPane {
     // ===================== Kursor celownika (Crosshair) =====================
 
     private void drawCrosshairAndSelection(GraphicsContext gc, double cX, double cY, double cW, double cH, double W, double H) {
-        if (crossX < cX || crossX > cX + cW || crossY < cY || crossY > cY + cH)
+        if (crossX < cX || crossX > cX + cW || crossY < cY || crossY > cY + cH) {
             return;
+        }
 
         Color crossColor = CROSS;
-        if (state == ChartState.SELECTING_SL) crossColor = SL_COLOR;
-        else if (state == ChartState.SELECTING_TP) crossColor = TP_COLOR;
+        if (state == ChartState.SELECTING_SL) {
+            crossColor = SL_COLOR;
+        } else if (state == ChartState.SELECTING_TP) {
+            crossColor = TP_COLOR;
+        }
 
         gc.setStroke(crossColor);
         gc.setLineWidth(0.7);
@@ -1520,8 +1601,9 @@ public class ChartPanel extends BorderPane {
             gc.fillText(formatPrice(p), cX + cW + 4, y + 4);
         }
 
-        if (candles.isEmpty())
+        if (candles.isEmpty()) {
             return;
+        }
         int firstVis = getFirstVisibleIndex();
         int lastVis = getLastVisibleIndex();
         int vis = lastVis - firstVis;
@@ -1556,10 +1638,12 @@ public class ChartPanel extends BorderPane {
 
     private String formatPrice(double p) {
         try {
-            if (p < 1)
+            if (p < 1) {
                 return String.format(Locale.US, "%.5f", p);
-            if (p < 100)
+            }
+            if (p < 100) {
                 return String.format(Locale.US, "%.4f", p);
+            }
             return String.format(Locale.US, "%.2f", p);
         } catch (Exception e) {
             return String.valueOf(p);

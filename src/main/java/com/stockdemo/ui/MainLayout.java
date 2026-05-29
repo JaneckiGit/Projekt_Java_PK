@@ -94,8 +94,9 @@ public class MainLayout extends BorderPane {
             portfolioPanel.refresh();
 
             Instrument sel = watchlistPanel.listView().getSelectionModel().getSelectedItem();
-            if (sel != null)
+            if (sel != null) {
                 chartPanel.refreshPrice(sel);
+            }
         });
 
         StackPane centerStack = new StackPane(chartPanel);
@@ -124,7 +125,9 @@ public class MainLayout extends BorderPane {
     }
 
     private void openSettings() {
-        if (appRoot == null || settingsWrapper != null) return;
+        if (appRoot == null || settingsWrapper != null) {
+            return;
+        }
 
         double panelWidth = 320;
 
@@ -269,7 +272,9 @@ public class MainLayout extends BorderPane {
         wrapper.setStyle("-fx-background-color: rgba(0,0,0,0.35);");
         wrapper.setPickOnBounds(true);
         wrapper.setOnMousePressed(e -> {
-            if (e.getTarget() == wrapper) closeSettings();
+            if (e.getTarget() == wrapper) {
+                closeSettings();
+            }
         });
 
         // Panel ustawiamy po prawej stronie
@@ -306,7 +311,9 @@ public class MainLayout extends BorderPane {
     }
 
     private void closeSettings() {
-        if (settingsWrapper == null) return;
+        if (settingsWrapper == null) {
+            return;
+        }
         Pane wrapper = settingsWrapper;
         settingsWrapper = null;
 
@@ -353,7 +360,9 @@ public class MainLayout extends BorderPane {
     // ===================== MINI-MENU =====================
 
     private void showMenu() {
-        if (appRoot == null) return;
+        if (appRoot == null) {
+            return;
+        }
         if (activeMenuWrapper != null) {
             closeMenu();
             return;
@@ -375,7 +384,9 @@ public class MainLayout extends BorderPane {
         wrapper.setPickOnBounds(true);
         wrapper.setStyle("-fx-background-color: transparent;");
         wrapper.setOnMousePressed(e -> {
-            if (e.getTarget() == wrapper) closeMenu();
+            if (e.getTarget() == wrapper) {
+                closeMenu();
+            }
         });
 
         appRoot.getChildren().add(wrapper);
@@ -393,7 +404,9 @@ public class MainLayout extends BorderPane {
 
         double appWidth = appRoot.getWidth();
         double x = appWidth - menuWidth - 8;
-        if (x < 8) x = 8;
+        if (x < 8) {
+            x = 8;
+        }
         menu.setLayoutX(x);
         menu.setLayoutY(y);
 
@@ -407,7 +420,9 @@ public class MainLayout extends BorderPane {
     }
 
     private void closeMenu() {
-        if (activeMenuWrapper == null) return;
+        if (activeMenuWrapper == null) {
+            return;
+        }
         Pane wrapper = activeMenuWrapper;
         activeMenuWrapper = null;
 
@@ -623,7 +638,9 @@ public class MainLayout extends BorderPane {
         Runnable validate = () -> {
             try {
                 double v = Double.parseDouble(field.getText().replace(",", "."));
-                if (v <= 0) throw new NumberFormatException();
+                if (v <= 0) {
+                    throw new NumberFormatException();
+                }
                 field.setStyle(fieldNormalStyle);
                 applyBtn.setDisable(false);
             } catch (Exception ex) {
@@ -637,7 +654,9 @@ public class MainLayout extends BorderPane {
         applyBtn.setOnAction(e -> {
             try {
                 double v = Double.parseDouble(field.getText().replace(",", "."));
-                if (v <= 0) return;
+                if (v <= 0) {
+                    return;
+                }
 
                 // Zamknij wszystkie otwarte pozycje przed ustawieniem nowego balansu
                 if (!portfolio.openPositions.isEmpty()) {
@@ -695,7 +714,11 @@ public class MainLayout extends BorderPane {
         ToggleGroup tgCel = new ToggleGroup();
         rbZlozenie.setToggleGroup(tgCel);
         rbKorekta.setToggleGroup(tgCel);
-        if (pit8cData.celZlozenie) rbZlozenie.setSelected(true); else rbKorekta.setSelected(true);
+        if (pit8cData.celZlozenie) {
+            rbZlozenie.setSelected(true);
+        } else {
+            rbKorekta.setSelected(true);
+        }
         cellBox.getChildren().addAll(rbZlozenie, rbKorekta);
         
         Label lblCel = new Label("Cel złożenia:");
@@ -910,7 +933,9 @@ public class MainLayout extends BorderPane {
         }
 
         public void setSelected(boolean value) {
-            if (this.selected == value) return;
+            if (this.selected == value) {
+                return;
+            }
             this.selected = value;
 
             TranslateTransition translate = new TranslateTransition(Duration.millis(120), thumb);

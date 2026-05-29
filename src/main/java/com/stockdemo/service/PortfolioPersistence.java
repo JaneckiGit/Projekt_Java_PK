@@ -60,7 +60,9 @@ public class PortfolioPersistence {
 
     public static void load(PortfolioService portfolio, MarketDataService marketData) {
         File file = new File(FILE_PATH);
-        if (!file.exists()) return;
+        if (!file.exists()) {
+            return;
+        }
 
         try {
             String content = new String(Files.readAllBytes(file.toPath()));
