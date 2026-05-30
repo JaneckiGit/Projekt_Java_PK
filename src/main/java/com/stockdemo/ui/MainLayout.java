@@ -64,7 +64,6 @@ public class MainLayout extends BorderPane {
     // Preferencje (ustawienia z modala Settings)
     private static final Preferences PREFS = Preferences.userNodeForPackage(MainLayout.class);
     private static final String PREF_SOUND_ALERTS = "soundAlerts";
-    private static final String PREF_DARK_MODE = "darkMode";
 
     public PortfolioService getPortfolio() { return portfolio; }
     public MarketDataService getMarketData() { return marketData; }
@@ -506,14 +505,7 @@ public class MainLayout extends BorderPane {
                 v -> PREFS.putBoolean(PREF_SOUND_ALERTS, v)
         );
 
-        HBox dark = buildToggleRow(
-                "Dark Mode",
-                "Use high-contrast sleek dark UI theme styling",
-                PREFS.getBoolean(PREF_DARK_MODE, true),
-                v -> PREFS.putBoolean(PREF_DARK_MODE, v)
-        );
-
-        VBox generalSection = new VBox(8, generalTitle, sound, dark);
+        VBox generalSection = new VBox(8, generalTitle, sound);
 
         Label aboutTitle = new Label("PLATFORM INFO");
         aboutTitle.getStyleClass().add("settings-section-title");

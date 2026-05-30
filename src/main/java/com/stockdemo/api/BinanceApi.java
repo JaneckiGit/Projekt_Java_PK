@@ -2,6 +2,7 @@ package com.stockdemo.api;
 
 import com.stockdemo.model.Candle;
 import com.stockdemo.model.Instrument;
+import com.stockdemo.model.TickerData;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -47,23 +48,34 @@ public class BinanceApi {
         return candles;
     }
 
-    public void updatePrice(Instrument instrument) throws Exception {
-        String url = BASE + "/ticker/24hr?symbol=" + instrument.getApiSymbol();
+    public TickerData fetchTicker(String apiSymbol) throws Exception {
+        String url = BASE + "/ticker/24hr?symbol=" + apiSymbol;
         String body = get(url);
         JSONObject obj = new JSONObject(body);
 
         double lastPrice = obj.getDouble("lastPrice");
-        instrument.setPrice(lastPrice);
-        instrument.setChangePercent(obj.getDouble("priceChangePercent"));
-        instrument.setDayHigh(obj.getDouble("highPrice"));
-        instrument.setDayLow(obj.getDouble("lowPrice"));
-        instrument.setVolume(obj.getDouble("volume"));
-        instrument.setOpen(obj.getDouble("openPrice"));
-        instrument.setPrevClose(obj.getDouble("prevClosePrice"));
+        double changePercent = obj.getDouble("priceChangePercent");
+        double dayHigh = obj.getDouble("highPrice");
+        double dayLow = obj.getDouble("lowPrice");
+        double volume = obj.getDouble("volume");
+        double open = obj.getDouble("openPrice");
+        double prevClose = obj.getDouble("prevClosePrice");
 
         // Symulujemy spread rzędu 0.1% dla krypto
-        instrument.setBid(lastPrice * 0.999);
-        instrument.setAsk(lastPrice * 1.001);
+        double bid = lastPrice * 0.999;
+        double ask = lastPrice * 1.001;
+
+        return new TickerData(
+            lastPrice,
+            changePercent,
+            dayHigh,
+            dayLow,
+            volume,
+            open,
+            prevClose,
+            bid,
+            ask
+        );
     }
 
     private String get(String url) throws Exception {

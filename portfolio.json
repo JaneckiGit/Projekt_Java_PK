@@ -1,5 +1,103 @@
 {
-  "openPositions": [],
-  "balance": 100000,
-  "closedPositions": []
+  "openPositions": [{
+    "entryPrice": 74108.04400999998,
+    "symbol": "BTC",
+    "isLong": true,
+    "quantity": 0.5,
+    "stopLoss": 0,
+    "takeProfit": 0
+  }],
+  "balance": 62582.27789500002,
+  "closedPositions": [
+    {
+      "entryPrice": 2041.5495099999998,
+      "closeDate": "2026-05-29T18:37:46.139344",
+      "symbol": "ETH",
+      "isLong": true,
+      "quantity": 10,
+      "realizedPnl": -42.388599999999315,
+      "closePrice": 2037.31065
+    },
+    {
+      "entryPrice": 2042.52048,
+      "closeDate": "2026-05-29T18:37:17.07873",
+      "symbol": "ETH",
+      "isLong": true,
+      "quantity": 10,
+      "realizedPnl": -34.81559999999945,
+      "closePrice": 2039.03892
+    },
+    {
+      "entryPrice": 2042.8508099999997,
+      "closeDate": "2026-05-29T18:36:42.417303",
+      "symbol": "ETH",
+      "isLong": true,
+      "quantity": 10,
+      "realizedPnl": -40.816199999997025,
+      "closePrice": 2038.76919
+    },
+    {
+      "entryPrice": 2042.7607199999998,
+      "closeDate": "2026-05-29T18:36:36.506363",
+      "symbol": "ETH",
+      "isLong": true,
+      "quantity": 10,
+      "realizedPnl": -36.318899999996574,
+      "closePrice": 2039.12883
+    },
+    {
+      "entryPrice": 2043.6015599999996,
+      "closeDate": "2026-05-29T18:36:20.970037",
+      "symbol": "ETH",
+      "isLong": true,
+      "quantity": 10,
+      "realizedPnl": -40.83119999999553,
+      "closePrice": 2039.51844
+    },
+    {
+      "entryPrice": 2044.0419999999997,
+      "closeDate": "2026-05-29T18:36:17.971739",
+      "symbol": "ETH",
+      "isLong": true,
+      "quantity": 10,
+      "realizedPnl": -42.43839999999864,
+      "closePrice": 2039.7981599999998
+    },
+    {
+      "entryPrice": 2042.0800399999998,
+      "closeDate": "2026-05-29T18:36:04.556586",
+      "symbol": "ETH",
+      "isLong": true,
+      "quantity": 10,
+      "realizedPnl": -36.904699999997774,
+      "closePrice": 2038.38957
+    },
+    {
+      "entryPrice": 2040.4784399999999,
+      "closeDate": "2026-05-29T18:35:31.323935",
+      "symbol": "ETH",
+      "isLong": true,
+      "quantity": 10,
+      "realizedPnl": -36.07349999999769,
+      "closePrice": 2036.87109
+    },
+    {
+      "entryPrice": 2041.6596199999997,
+      "closeDate": "2026-05-29T18:35:12.979693",
+      "symbol": "ETH",
+      "isLong": true,
+      "quantity": 10,
+      "realizedPnl": -49.88329999999678,
+      "closePrice": 2036.67129
+    },
+    {
+      "entryPrice": 311.565705,
+      "closeDate": "2026-05-29T18:34:11.837091",
+      "symbol": "AAPL",
+      "isLong": true,
+      "quantity": 20,
+      "realizedPnl": -3.2296999999994114,
+      "closePrice": 311.40422
+    }
+  ]
 }

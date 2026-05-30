@@ -32,6 +32,7 @@ public class MainApp {
 
             stage.setOnCloseRequest(e -> {
                 PortfolioPersistence.save(root.getPortfolio());
+                root.getMarketData().shutdown();
             });
 
             stage.show();
