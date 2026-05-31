@@ -2,6 +2,7 @@ package com.stockdemo.api;
 
 import com.stockdemo.model.Candle;
 import com.stockdemo.model.Instrument;
+import com.stockdemo.model.TickerData;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -35,8 +36,8 @@ public class YahooFinanceApi {
         return parseCandles(body);
     }
 
-    public void updatePrice(Instrument instrument) throws Exception {
-        String url = BASE + encode(instrument.getApiSymbol()) + "?interval=1d&range=5d";
+    public TickerData fetchTicker(String apiSymbol) throws Exception {
+        String url = BASE + encode(apiSymbol) + "?interval=1d&range=5d";
         String body = get(url);
         JSONObject root = new JSONObject(body);
         JSONObject result = root
@@ -52,19 +53,28 @@ public class YahooFinanceApi {
                 meta.optDouble("previousClose", price));
         double changePct = prevClose != 0 ? ((price - prevClose) / prevClose) * 100.0 : 0;
 
-        instrument.setPrice(price);
-        instrument.setChangePercent(changePct);
-        instrument.setPrevClose(prevClose);
-        instrument.setDayHigh(meta.optDouble("regularMarketDayHigh",
-                meta.optDouble("fiftyTwoWeekHigh", 0)));
-        instrument.setDayLow(meta.optDouble("regularMarketDayLow",
-                meta.optDouble("fiftyTwoWeekLow", 0)));
-        instrument.setVolume(meta.optDouble("regularMarketVolume", 0));
-        instrument.setOpen(meta.optDouble("regularMarketOpen", price));
+        double dayHigh = meta.optDouble("regularMarketDayHigh",
+                meta.optDouble("fiftyTwoWeekHigh", 0));
+        double dayLow = meta.optDouble("regularMarketDayLow",
+                meta.optDouble("fiftyTwoWeekLow", 0));
+        double volume = meta.optDouble("regularMarketVolume", 0);
+        double open = meta.optDouble("regularMarketOpen", price);
 
         // Symulacja spreadu rzędu 0.05% dla akcji
-        instrument.setBid(price * 0.9995);
-        instrument.setAsk(price * 1.0005);
+        double bid = price * 0.9995;
+        double ask = price * 1.0005;
+
+        return new TickerData(
+            price,
+            changePct,
+            dayHigh,
+            dayLow,
+            volume,
+            open,
+            prevClose,
+            bid,
+            ask
+        );
     }
 
     private String get(String url) throws Exception {
@@ -98,7 +108,9 @@ public class YahooFinanceApi {
             JSONArray vols   = q.optJSONArray("volume");
 
             for (int i = 0; i < timestamps.length(); i++) {
-                if (closes.isNull(i) || opens.isNull(i)) continue;
+                if (closes.isNull(i) || opens.isNull(i)) {
+                    continue;
+                }
                 long ts     = timestamps.getLong(i);
                 double open  = opens.optDouble(i, 0);
                 double high  = highs.optDouble(i, 0);

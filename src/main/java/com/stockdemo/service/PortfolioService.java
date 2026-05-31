@@ -38,7 +38,9 @@ public class PortfolioService {
     }
 
     private static void playAlertSound() {
-        if (ALERT_WAV_BYTES == null) return;
+        if (ALERT_WAV_BYTES == null) {
+            return;
+        }
         new Thread(() -> {
             try {
                 AudioInputStream ais = AudioSystem.getAudioInputStream(
@@ -74,13 +76,19 @@ public class PortfolioService {
     //Otwiera nową pozycję na rynku.
 
     public boolean openPosition(Instrument instrument, boolean isLong, double quantity, double sl, double tp) {
-        if (!isLong) return false; // Spot market only allows buying
+        if (!isLong) {
+            return false; // Spot market only allows buying
+        }
 
         double currentPrice = instrument.getAsk();
-        if (currentPrice <= 0) return false;
+        if (currentPrice <= 0) {
+            return false;
+        }
 
         double cost = quantity * currentPrice;
-        if (balance.get() < cost) return false; // Insufficient funds
+        if (balance.get() < cost) {
+            return false; // Insufficient funds
+        }
 
         balance.set(balance.get() - cost); // Deduct Cash
 
@@ -97,7 +105,9 @@ public class PortfolioService {
 
     //Zamyka pozycję. Gdy isAutoClose == true (SL/TP), odtwarza dźwięk alertu.
     public void closePosition(Position pos, boolean isAutoClose) {
-        if (!openPositions.contains(pos)) return;
+        if (!openPositions.contains(pos)) {
+            return;
+        }
         
         pos.updatePnl(); // Upewnij się, że PnL jest aktualny
         double pnl = pos.getPnl();

@@ -77,7 +77,10 @@ public class Pit8cPdfGenerator {
     private void loadFonts() throws IOException {
         f = tryLoad(REGULAR_FONT_PATHS);
         fb = tryLoad(BOLD_FONT_PATHS);
-        if (f != null && fb != null) { ttf = true; return; }
+        if (f != null && fb != null) {
+            ttf = true;
+            return;
+        }
         f = PDType1Font.HELVETICA;
         fb = PDType1Font.HELVETICA_BOLD;
         ttf = false;
@@ -94,8 +97,12 @@ public class Pit8cPdfGenerator {
     }
 
     private String s(String t) {
-        if (t == null) return "";
-        if (ttf) return t;
+        if (t == null) {
+            return "";
+        }
+        if (ttf) {
+            return t;
+        }
         return t.replace('ą','a').replace('Ą','A').replace('ć','c').replace('Ć','C')
                 .replace('ę','e').replace('Ę','E').replace('ł','l').replace('Ł','L')
                 .replace('ń','n').replace('Ń','N').replace('ś','s').replace('Ś','S')
@@ -116,7 +123,9 @@ public class Pit8cPdfGenerator {
     }
 
     private void txt(float x, float y, String text, PDFont font, float size) throws IOException {
-        if (text == null || text.isEmpty()) return;
+        if (text == null || text.isEmpty()) {
+            return;
+        }
         cs.beginText(); cs.setFont(font, size);
         cs.newLineAtOffset(x, PH - y);
         cs.showText(s(text)); cs.endText();
@@ -124,11 +133,15 @@ public class Pit8cPdfGenerator {
 
     private void checkbox(float x, float y, boolean checked) throws IOException {
         rect(x, y, 8, 8);
-        if (checked) txt(x + 1.5f, y + 6.5f, "X", fb, 7);
+        if (checked) {
+            txt(x + 1.5f, y + 6.5f, "X", fb, 7);
+        }
     }
 
     private String fmtZl(double v) {
-        if (v == 0) return "";
+        if (v == 0) {
+            return "";
+        }
         long gr = Math.round(v * 100);
         long zl = gr / 100;
         long g = Math.abs(gr % 100);
@@ -329,10 +342,14 @@ public class Pit8cPdfGenerator {
             txt(ML + 3, y + 8, (String) r[0], i == rows.length - 1 ? fb : f, 5.5f);
             txt(ML + dW + 3, y + 8, (String) r[1], fb, 6);
             String rv = fmtZl((double) r[2]);
-            if (!rv.isEmpty()) txt(ML + dW + pW * 0.3f, y + 16, rv, f, 7);
+            if (!rv.isEmpty()) {
+                txt(ML + dW + pW * 0.3f, y + 16, rv, f, 7);
+            }
             txt(ML + dW + pW + 3, y + 8, (String) r[3], fb, 6);
             String cv = fmtZl((double) r[4]);
-            if (!cv.isEmpty()) txt(ML + dW + pW + kW * 0.3f, y + 16, cv, f, 7);
+            if (!cv.isEmpty()) {
+                txt(ML + dW + pW + kW * 0.3f, y + 16, cv, f, 7);
+            }
             
             // zł / gr labels
             txt(ML + dW + pW * 0.7f, y + 16, CURRENCY_ZL, f, 5);

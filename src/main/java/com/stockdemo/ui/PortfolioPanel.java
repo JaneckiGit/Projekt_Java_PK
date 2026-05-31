@@ -184,7 +184,9 @@ public class PortfolioPanel extends VBox {
         menuBtn.getStyleClass().add("chart-type-btn");
         menuBtn.setTooltip(new javafx.scene.control.Tooltip("Menu"));
         menuBtn.setOnAction(e -> {
-            if (onMenuRequested != null) onMenuRequested.run();
+            if (onMenuRequested != null) {
+                onMenuRequested.run();
+            }
         });
 
         // Przycisk ustawień (⚙) obok menu
@@ -207,7 +209,9 @@ public class PortfolioPanel extends VBox {
         settingsBtn.getStyleClass().add("chart-type-btn");
         settingsBtn.setTooltip(new javafx.scene.control.Tooltip("Settings"));
         settingsBtn.setOnAction(e -> {
-            if (onSettingsRequested != null) onSettingsRequested.run();
+            if (onSettingsRequested != null) {
+                onSettingsRequested.run();
+            }
         });
         
         settingsBtn.setOnMouseEntered(e -> gearPath.setFill(Color.web(primaryText())));
@@ -561,11 +565,19 @@ public class PortfolioPanel extends VBox {
 
         double currentPrice = selectedInstrument.getAsk();
         if (isLong) {
-            if (sl >= currentPrice) sl = 0.0;
-            if (tp > 0 && tp <= currentPrice) tp = 0.0;
+            if (sl >= currentPrice) {
+                sl = 0.0;
+            }
+            if (tp > 0 && tp <= currentPrice) {
+                tp = 0.0;
+            }
         } else {
-            if (sl > 0 && sl <= currentPrice) sl = 0.0;
-            if (tp > 0 && tp >= currentPrice) tp = 0.0;
+            if (sl > 0 && sl <= currentPrice) {
+                sl = 0.0;
+            }
+            if (tp > 0 && tp >= currentPrice) {
+                tp = 0.0;
+            }
         }
 
         boolean success = portfolio.openPosition(selectedInstrument, isLong, qty, sl, tp);
@@ -592,15 +604,21 @@ public class PortfolioPanel extends VBox {
     }
 
     private String formatPrice(double p) {
-        if (p < 1) return String.format(java.util.Locale.US, "%.5f", p);
-        if (p < 100) return String.format(java.util.Locale.US, "%.4f", p);
+        if (p < 1) {
+            return String.format(java.util.Locale.US, "%.5f", p);
+        }
+        if (p < 100) {
+            return String.format(java.util.Locale.US, "%.4f", p);
+        }
         return String.format(java.util.Locale.US, "%.2f", p);
     }
 
     private void showToast(String title, String msg) {
         // Find the root StackPane of the scene
         StackPane overlay = findRootStackPane();
-        if (overlay == null) return;
+        if (overlay == null) {
+            return;
+        }
 
         // --- Toast container ---
         VBox toast = new VBox(6);
@@ -675,9 +693,13 @@ public class PortfolioPanel extends VBox {
     }
 
     private StackPane findRootStackPane() {
-        if (getScene() == null) return null;
+        if (getScene() == null) {
+            return null;
+        }
         Parent root = getScene().getRoot();
-        if (root instanceof StackPane) return (StackPane) root;
+        if (root instanceof StackPane) {
+            return (StackPane) root;
+        }
         return null;
     }
 

@@ -51,16 +51,35 @@ public class PortfolioPersistence {
         }
         root.put("closedPositions", closedArr);
 
-        try (FileWriter file = new FileWriter(FILE_PATH)) {
-            file.write(root.toString(2));
+        File targetFile = new File(FILE_PATH);
+        File tempFile = new File(FILE_PATH + ".tmp");
+
+        try {
+            // Write to temporary file
+            try (FileWriter file = new FileWriter(tempFile)) {
+                file.write(root.toString(2));
+            }
+            // Atomically replace target file
+            java.nio.file.Files.move(
+                tempFile.toPath(),
+                targetFile.toPath(),
+                java.nio.file.StandardCopyOption.REPLACE_EXISTING,
+                java.nio.file.StandardCopyOption.ATOMIC_MOVE
+            );
         } catch (IOException e) {
+            System.err.println("[PortfolioPersistence] Save failed: " + e.getMessage());
             e.printStackTrace();
+            if (tempFile.exists()) {
+                tempFile.delete();
+            }
         }
     }
 
     public static void load(PortfolioService portfolio, MarketDataService marketData) {
         File file = new File(FILE_PATH);
-        if (!file.exists()) return;
+        if (!file.exists()) {
+            return;
+        }
 
         try {
             String content = new String(Files.readAllBytes(file.toPath()));

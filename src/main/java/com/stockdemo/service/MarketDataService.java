@@ -5,6 +5,7 @@ import com.stockdemo.api.YahooFinanceApi;
 import com.stockdemo.model.AssetType;
 import com.stockdemo.model.Candle;
 import com.stockdemo.model.Instrument;
+import com.stockdemo.model.TickerData;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -86,8 +87,10 @@ public class MarketDataService {
                 .filter(i -> i.getType() == AssetType.CRYPTO)
                 .toList();
         scheduler.scheduleAtFixedRate(() -> {
-            cryptoList.forEach(inst -> updatePriceSafely(inst, binance::updatePrice, "Poll-Crypto"));
-            if (onUpdate != null) Platform.runLater(onUpdate);
+            cryptoList.forEach(inst -> updatePriceSafely(inst, binance::fetchTicker, "Poll-Crypto"));
+            if (onUpdate != null) {
+                Platform.runLater(onUpdate);
+            }
         }, 0, 2, TimeUnit.SECONDS);
 
         //Stocks/CFD timer (every 5 seconds)
@@ -95,22 +98,35 @@ public class MarketDataService {
                 .filter(i -> i.getType() != AssetType.CRYPTO)
                 .toList();
         scheduler.scheduleAtFixedRate(() -> {
-            stocksCfdList.forEach(inst -> updatePriceSafely(inst, yahoo::updatePrice, "Poll-Stock"));
-            if (onUpdate != null) Platform.runLater(onUpdate);
+            stocksCfdList.forEach(inst -> updatePriceSafely(inst, yahoo::fetchTicker, "Poll-Stock"));
+            if (onUpdate != null) {
+                Platform.runLater(onUpdate);
+            }
         }, 1, 5, TimeUnit.SECONDS);
     }
 
-    private void updatePriceSafely(Instrument inst, PriceUpdater updater, String logPrefix) {
+    private void updatePriceSafely(Instrument inst, PriceFetcher fetcher, String logPrefix) {
         try {
-            updater.update(inst);
+            TickerData data = fetcher.fetch(inst.getApiSymbol());
+            Platform.runLater(() -> {
+                inst.setPrice(data.price());
+                inst.setChangePercent(data.changePercent());
+                inst.setDayHigh(data.dayHigh());
+                inst.setDayLow(data.dayLow());
+                inst.setVolume(data.volume());
+                inst.setOpen(data.open());
+                inst.setPrevClose(data.prevClose());
+                inst.setBid(data.bid());
+                inst.setAsk(data.ask());
+            });
         } catch (Exception e) {
             System.err.println("[" + logPrefix + "] " + inst.getSymbol() + ": " + e.getMessage());
         }
     }
 
     @FunctionalInterface
-    private interface PriceUpdater {
-        void update(Instrument inst) throws Exception;
+    private interface PriceFetcher {
+        TickerData fetch(String apiSymbol) throws Exception;
     }
 
 

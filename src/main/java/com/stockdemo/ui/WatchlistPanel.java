@@ -69,8 +69,9 @@ public class WatchlistPanel extends VBox {
             if (sel != null) {
                 currentDetail = sel;
                 updateDetailPanel(sel);
-                if (onSelect != null)
+                if (onSelect != null) {
                     onSelect.accept(sel);
+                }
             }
         });
         VBox.setVgrow(listView, Priority.ALWAYS);
@@ -94,8 +95,9 @@ public class WatchlistPanel extends VBox {
     /** Call to refresh cell rendering and update detail panel. */
     public void refreshList() {
         listView.refresh();
-        if (currentDetail != null)
+        if (currentDetail != null) {
             updateDetailPanel(currentDetail);
+        }
     }
 
     public void applyTheme(boolean isDark) {
@@ -160,8 +162,9 @@ public class WatchlistPanel extends VBox {
         ColumnConstraints c0 = new ColumnConstraints(90);
         ColumnConstraints c1 = new ColumnConstraints();
         c1.setHgrow(Priority.ALWAYS);
-        if (row == 0)
+        if (row == 0) {
             grid.getColumnConstraints().addAll(c0, c1);
+        }
     }
 
     private void updateDetailPanel(Instrument inst) {
@@ -175,12 +178,13 @@ public class WatchlistPanel extends VBox {
 
         //Volume formatting
         double vol = inst.getVolume();
-        if (vol >= 1_000_000)
+        if (vol >= 1_000_000) {
             detailVol.setText(String.format("%.2fM", vol / 1_000_000));
-        else if (vol >= 1_000)
+        } else if (vol >= 1_000) {
             detailVol.setText(String.format("%.1fK", vol / 1_000));
-        else
+        } else {
             detailVol.setText(String.format("%.2f", vol));
+        }
 
         double ch = inst.getChangePercent();
         String sign = ch >= 0 ? "+" : "";
@@ -318,12 +322,15 @@ public class WatchlistPanel extends VBox {
     }
 
     public static String formatPrice(double p) {
-        if (p <= 0)
+        if (p <= 0) {
             return "—";
-        if (p < 1)
+        }
+        if (p < 1) {
             return String.format(java.util.Locale.US, "%.5f", p);
-        if (p < 100)
+        }
+        if (p < 100) {
             return String.format(java.util.Locale.US, "%.4f", p);
+        }
         return String.format(java.util.Locale.US, "%.2f", p);
     }
 }
