@@ -20,6 +20,7 @@ import com.stockdemo.model.ClosedPosition;
 public class PortfolioService {
 
     private static final byte[] ALERT_WAV_BYTES;
+    private static boolean soundEnabled = true;
 
     static {
         byte[] bytes = null;
@@ -37,7 +38,14 @@ public class PortfolioService {
         ALERT_WAV_BYTES = bytes;
     }
 
+    public static void setSoundEnabled(boolean enabled) {
+        soundEnabled = enabled;
+    }
+
     private static void playAlertSound() {
+        if (!soundEnabled) {
+            return;
+        }
         if (ALERT_WAV_BYTES == null) {
             return;
         }

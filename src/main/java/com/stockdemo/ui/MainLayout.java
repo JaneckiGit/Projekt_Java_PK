@@ -104,6 +104,8 @@ public class MainLayout extends BorderPane {
     public void setAppRoot(StackPane appRoot) { this.appRoot = appRoot; }
 
     public MainLayout() {
+        PortfolioService.setSoundEnabled(PREFS.getBoolean(PREF_SOUND_ALERTS, true));
+
         this.marketData = new MarketDataService();
         this.portfolio = new PortfolioService();
 
@@ -395,7 +397,7 @@ public class MainLayout extends BorderPane {
         panel.getChildren().addAll(header, scroll);
 
         // Wrapper z półprzezroczystym tłem
-        Pane wrapper = new Pane();
+        StackPane wrapper = new StackPane();
         wrapper.setStyle("-fx-background-color: rgba(0,0,0,0.35);");
         wrapper.setPickOnBounds(true);
         wrapper.setOnMousePressed(e -> {
@@ -403,37 +405,20 @@ public class MainLayout extends BorderPane {
         });
 
         // Panel ustawiamy po prawej stronie
+        panel.setTranslateX(panelWidth);
         wrapper.getChildren().add(panel);
-        wrapper.layoutBoundsProperty().addListener((o, ov, nv) -> {
-            panel.setLayoutX(nv.getWidth() - panelWidth);
-            panel.setPrefHeight(nv.getHeight());
-        });
+        StackPane.setAlignment(panel, Pos.CENTER_RIGHT);
 
         appRoot.getChildren().add(wrapper);
         settingsWrapper = wrapper;
         applyTheme(darkTheme);
 
-        // Po dodaniu — wymiar jest znany
-        Platform.runLater(() -> {
-            double h = appRoot.getHeight();
-            panel.setPrefHeight(h);
-            panel.setLayoutX(appRoot.getWidth() - panelWidth);
-
-            // Slide-in animation
-            panel.setTranslateX(panelWidth);
-            TranslateTransition slide = new TranslateTransition(Duration.millis(200), panel);
-            slide.setFromX(panelWidth);
-            slide.setToX(0);
-            slide.setInterpolator(Interpolator.EASE_OUT);
-
-            FadeTransition fade = new FadeTransition(Duration.millis(200), wrapper);
-            fade.setFromValue(0);
-            fade.setToValue(1);
-            fade.setInterpolator(Interpolator.EASE_OUT);
-
-            slide.play();
-            fade.play();
-        });
+        // Slide-in animation
+        TranslateTransition slide = new TranslateTransition(Duration.millis(180), panel);
+        slide.setFromX(panelWidth);
+        slide.setToX(0);
+        slide.setInterpolator(Interpolator.EASE_IN);
+        slide.play();
     }
 
     private void closeSettings() {
@@ -619,7 +604,7 @@ public class MainLayout extends BorderPane {
                 "Sound Alerts",
                 "Play alert.wav when Stop Loss or Take Profit is triggered",
                 PREFS.getBoolean(PREF_SOUND_ALERTS, true),
-                v -> PREFS.putBoolean(PREF_SOUND_ALERTS, v)
+                v -> { PREFS.putBoolean(PREF_SOUND_ALERTS, v); PortfolioService.setSoundEnabled(v); }
         );
 
         HBox dark = buildToggleRow(
