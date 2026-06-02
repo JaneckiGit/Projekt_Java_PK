@@ -633,6 +633,16 @@ public class ChartPanel extends BorderPane {
         loadChart();
     }
 
+    /** Returns the instrument currently displayed on the chart. */
+    public Instrument getCurrentInstrument() {
+        return currentInstrument;
+    }
+
+    /** Returns an immutable snapshot of the candles currently displayed on the chart. */
+    public List<Candle> getCurrentCandles() {
+        return List.copyOf(candles);
+    }
+
     public void setPendingSlPrice(double price) {
         this.pendingSlPrice = price;
         redraw();

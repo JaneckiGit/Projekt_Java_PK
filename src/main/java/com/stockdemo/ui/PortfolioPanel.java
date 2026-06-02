@@ -54,9 +54,7 @@ public class PortfolioPanel extends VBox {
     // Wewnętrzny kontener na zawartość
     private final VBox content = new VBox(0);
 
-    private final Button menuBtn = new Button("\u2630");
     private final Button settingsBtn = new Button();
-    private Runnable onMenuRequested;
     private Runnable onSettingsRequested;
     private boolean darkTheme = MainLayout.isDarkTheme();
     private SVGPath settingsGearPath;
@@ -133,16 +131,6 @@ public class PortfolioPanel extends VBox {
         updateOrderValue(); //to refresh pending preview on chart
     }
 
-    /** Zwraca przycisk menu (potrzebne do pozycjonowania mini-menu). */
-    public Button getMenuButton() {
-        return menuBtn;
-    }
-
-    /** Ustawia handler wywoływany po kliknięciu przycisku menu (☰). */
-    public void setOnMenuRequested(Runnable handler) {
-        this.onMenuRequested = handler;
-    }
-
     /** Ustawia handler wywoływany po kliknięciu przycisku ustawień (⚙). */
     public void setOnSettingsRequested(Runnable handler) {
         this.onSettingsRequested = handler;
@@ -180,16 +168,7 @@ public class PortfolioPanel extends VBox {
         Label sectionTitle = new Label("ACCOUNT");
         sectionTitle.getStyleClass().add("section-title");
 
-        // Przycisk menu (☰) obok tytułu ACCOUNT
-        menuBtn.getStyleClass().add("chart-type-btn");
-        menuBtn.setTooltip(new javafx.scene.control.Tooltip("Menu"));
-        menuBtn.setOnAction(e -> {
-            if (onMenuRequested != null) {
-                onMenuRequested.run();
-            }
-        });
-
-        // Przycisk ustawień (⚙) obok menu
+        // Przycisk ustawień
         SVGPath gearPath = new SVGPath();
         gearPath.setContent("M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z");
         settingsGearPath = gearPath;
@@ -219,7 +198,7 @@ public class PortfolioPanel extends VBox {
 
         Region headerSpacer = new Region();
         HBox.setHgrow(headerSpacer, Priority.ALWAYS);
-        HBox header = new HBox(6, sectionTitle, headerSpacer, menuBtn, settingsBtn);
+        HBox header = new HBox(6, sectionTitle, headerSpacer, settingsBtn);
         header.setAlignment(Pos.CENTER_LEFT);
 
         balanceLabel.getStyleClass().add("balance-value");

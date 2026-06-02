@@ -14,7 +14,6 @@ import javafx.animation.FadeTransition;
 import javafx.animation.Interpolator;
 import javafx.animation.TranslateTransition;
 import javafx.application.Platform;
-import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -53,9 +52,6 @@ public class MainLayout extends BorderPane {
 
     // Referencja do StackPane z MainApp — używana do nakładania modali i mini-menu
     private StackPane appRoot;
-
-    // Aktywne mini-menu (wraz z wrapperem przechwytującym kliknięcia poza menu)
-    private Pane activeMenuWrapper;
 
     // Settings sidebar state
     private Pane settingsWrapper;
@@ -140,8 +136,6 @@ public class MainLayout extends BorderPane {
         this.setCenter(centerStack);
         this.setRight(portfolioPanel);
 
-        // Po zbudowaniu paneli — podłącz menu przycisk (w PortfolioPanel)
-        portfolioPanel.setOnMenuRequested(this::showMenu);
         // Podłącz przycisk ustawień (⚙)
         portfolioPanel.setOnSettingsRequested(this::toggleSettings);
 
@@ -302,6 +296,34 @@ public class MainLayout extends BorderPane {
         // Items container
         VBox items = new VBox(4);
         items.setPadding(new Insets(8, 8, 8, 8));
+
+        // Section: Statistics
+        Label statisticsSection = new Label("STATISTICS");
+        statisticsSection.getStyleClass().add("settings-section-title");
+
+        items.getChildren().addAll(
+                statisticsSection,
+                makeSettingsItem(
+                    "Statistics",
+                    "Review portfolio performance metrics",
+                    "M5 19V9h3v10H5zm6 0V5h3v14h-3zm6 0v-7h3v7h-3z",
+                    "#58a6ff", "rgba(88,166,255,0.1)",
+                    () -> {
+                        closeSettings();
+                        showModal("Statistics", buildStatisticsContent(portfolioPanel));
+                    }
+                ),
+                makeSettingsItem(
+                    "Analyzer",
+                    "Review active chart patterns and indicators",
+                    "M3 3h18v2H3V3zm2 4h14v14H5V7zm3 11h2v-5H8v5zm4 0h2v-8h-2v8zm4 0h2v-3h-2v3z",
+                    "#3fb950", "rgba(63,185,80,0.1)",
+                    () -> {
+                        closeSettings();
+                        openAnalyzerWindow();
+                    }
+                )
+        );
 
         // Section: Export
         Label exportSection = new Label("EXPORT");
@@ -466,92 +488,8 @@ public class MainLayout extends BorderPane {
         return item;
     }
 
-    // ===================== MINI-MENU =====================
-
-    private void showMenu() {
-        if (appRoot == null) return;
-        if (activeMenuWrapper != null) {
-            closeMenu();
-            return;
-        }
-
-        VBox menu = new VBox(2);
-        menu.getStyleClass().add("menu-popup");
-        menu.setMaxSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
-
-        menu.getChildren().addAll(
-                makeMenuItem("\uD83D\uDCCA  Statistics", () -> {
-                    closeMenu();
-                    showModal("Statistics", buildStatisticsContent(portfolioPanel));
-                })
-        );
-
-        // Wrapper — przezroczysta warstwa na cały appRoot, łapiąca kliknięcia poza menu
-        Pane wrapper = new Pane(menu);
-        wrapper.setPickOnBounds(true);
-        wrapper.setStyle("-fx-background-color: transparent;");
-        wrapper.setOnMousePressed(e -> {
-            if (e.getTarget() == wrapper) closeMenu();
-        });
-
-        appRoot.getChildren().add(wrapper);
-        activeMenuWrapper = wrapper;
-
-        // Wymuś layout, by poznać pref. rozmiar menu
-        menu.applyCss();
-        menu.layout();
-        double menuWidth = menu.prefWidth(-1);
-
-        // Pozycjonuj menu w prawym górnym rogu aplikacji (po prawej stronie panelu Account)
-        Button menuBtn = portfolioPanel.getMenuButton();
-        Bounds btnBounds = menuBtn.localToScene(menuBtn.getBoundsInLocal());
-        double y = btnBounds.getMaxY() + 4;
-
-        double appWidth = appRoot.getWidth();
-        double x = appWidth - menuWidth - 8;
-        if (x < 8) x = 8;
-        menu.setLayoutX(x);
-        menu.setLayoutY(y);
-
-        // Animacja fade-in
-        menu.setOpacity(0);
-        FadeTransition fade = new FadeTransition(Duration.millis(150), menu);
-        fade.setFromValue(0);
-        fade.setToValue(1);
-        fade.setInterpolator(Interpolator.EASE_OUT);
-        fade.play();
-    }
-
-    private void closeMenu() {
-        if (activeMenuWrapper == null) return;
-        Pane wrapper = activeMenuWrapper;
-        activeMenuWrapper = null;
-
-        Node menu = wrapper.getChildren().isEmpty() ? null : wrapper.getChildren().get(0);
-        if (menu == null) {
-            appRoot.getChildren().remove(wrapper);
-            return;
-        }
-
-        FadeTransition fade = new FadeTransition(Duration.millis(120), menu);
-        fade.setFromValue(menu.getOpacity());
-        fade.setToValue(0);
-        fade.setInterpolator(Interpolator.EASE_OUT);
-        fade.setOnFinished(e -> {
-            if (wrapper.getParent() instanceof Pane parent) {
-                parent.getChildren().remove(wrapper);
-            }
-        });
-        fade.play();
-    }
-
-    private Button makeMenuItem(String label, Runnable action) {
-        Button b = new Button(label);
-        b.getStyleClass().add("menu-popup-item");
-        b.setMaxWidth(Double.MAX_VALUE);
-        b.setFocusTraversable(false);
-        b.setOnAction(e -> action.run());
-        return b;
+    private void openAnalyzerWindow() {
+        showModal("Analyzer", new AnalyzerWindow(chartPanel.getCurrentCandles(), chartPanel.getCurrentInstrument()));
     }
 
     // ===================== ZAWARTOŚĆ MODALI =====================
