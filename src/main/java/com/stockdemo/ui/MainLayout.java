@@ -236,7 +236,6 @@ public class MainLayout extends BorderPane {
 
     private void showModal(String title, Node content) {
         new ModalOverlay(title, content).showOn(appRoot);
-        applyTheme(darkTheme);
     }
 
     // ===================== SETTINGS SIDEBAR =====================
@@ -308,20 +307,14 @@ public class MainLayout extends BorderPane {
                     "Review portfolio performance metrics",
                     "M5 19V9h3v10H5zm6 0V5h3v14h-3zm6 0v-7h3v7h-3z",
                     "#58a6ff", "rgba(88,166,255,0.1)",
-                    () -> {
-                        closeSettings();
-                        showModal("Statistics", buildStatisticsContent(portfolioPanel));
-                    }
+                    () -> closeSettings(() -> showModal("Statistics", buildStatisticsContent(portfolioPanel)))
                 ),
                 makeSettingsItem(
                     "Analyzer",
                     "Review active chart patterns and indicators",
                     "M3 3h18v2H3V3zm2 4h14v14H5V7zm3 11h2v-5H8v5zm4 0h2v-8h-2v8zm4 0h2v-3h-2v3z",
                     "#3fb950", "rgba(63,185,80,0.1)",
-                    () -> {
-                        closeSettings();
-                        openAnalyzerWindow();
-                    }
+                    () -> closeSettings(this::openAnalyzerWindow)
                 )
         );
 
@@ -346,10 +339,7 @@ public class MainLayout extends BorderPane {
                     "Fill form and download tax statement PDF",
                     "M12 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z M11 3.5L16.5 9H11V3.5z M7 12h10v2H7zm0 4h7v2H7z",
                     "#8957e5", "rgba(137,87,229,0.1)",
-                    () -> {
-                        closeSettings();
-                        showModal("PIT-8C Tax Form Details", buildPit8cFormContent());
-                    }
+                    () -> closeSettings(() -> showModal("PIT-8C Tax Form Details", buildPit8cFormContent()))
                 )
         );
 
@@ -364,21 +354,17 @@ public class MainLayout extends BorderPane {
                     "Reset portfolio value back to starting $100,000.00",
                     "M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z",
                     "#f0883e", "rgba(240,136,62,0.1)",
-                    () -> {
-                        closeSettings();
+                    () -> closeSettings(() -> {
                         com.stockdemo.service.PortfolioPersistence.reset(portfolio);
                         portfolioPanel.refresh();
-                    }
+                    })
                 ),
                 makeSettingsItem(
                     "Set Custom Balance",
                     "Manually adjust your primary trading balance",
                     "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h-1c-.55 0-1-.45-1-1v-2c0-.55.45-1 1-1h3v-1H9.5c-.28 0-.5-.22-.5-.5s.22-.5.5-.5H11V7h2v2h1c.55 0 1 .45 1 1v2c0 .55-.45 1-1 1h-3v1h3.5c.28 0 .5.22.5.5s-.22.5-.5.5H13v2z",
                     "#3fb950", "rgba(63,185,80,0.1)",
-                    () -> {
-                        closeSettings();
-                        showModal("Set Balance", buildBalanceContent(portfolio));
-                    }
+                    () -> closeSettings(() -> showModal("Set Balance", buildBalanceContent(portfolio)))
                 )
         );
 
@@ -393,10 +379,7 @@ public class MainLayout extends BorderPane {
                     "Adjust sound alerts, toggle dark mode, about info",
                     "M3 17v2h6v-2H3z M9 15H7v5h2v-5z M13 7v2h10V7H13z M19 5h-2v4h2V5z M3 12v2h18v-2H3z M15 10h-2v4h2v-4z",
                     "#bc8cff", "rgba(188,140,255,0.1)",
-                    () -> {
-                        closeSettings();
-                        showModal("Settings", buildSettingsContent());
-                    }
+                    () -> closeSettings(() -> showModal("Settings", buildSettingsContent()))
                 ),
                 makeSettingsItem(
                     "Exit Application",
@@ -433,7 +416,6 @@ public class MainLayout extends BorderPane {
 
         appRoot.getChildren().add(wrapper);
         settingsWrapper = wrapper;
-        applyTheme(darkTheme);
 
         // Slide-in animation
         TranslateTransition slide = new TranslateTransition(Duration.millis(180), panel);
@@ -444,13 +426,21 @@ public class MainLayout extends BorderPane {
     }
 
     private void closeSettings() {
-        if (settingsWrapper == null) return;
+        closeSettings(null);
+    }
+
+    private void closeSettings(Runnable onFinished) {
+        if (settingsWrapper == null) {
+            if (onFinished != null) onFinished.run();
+            return;
+        }
         Pane wrapper = settingsWrapper;
         settingsWrapper = null;
 
         Node panel = wrapper.getChildren().isEmpty() ? null : wrapper.getChildren().get(0);
         if (panel == null) {
             appRoot.getChildren().remove(wrapper);
+            if (onFinished != null) onFinished.run();
             return;
         }
 
@@ -462,7 +452,12 @@ public class MainLayout extends BorderPane {
         fade.setToValue(0);
         fade.setInterpolator(Interpolator.EASE_IN);
 
-        slide.setOnFinished(e -> appRoot.getChildren().remove(wrapper));
+        slide.setOnFinished(e -> {
+            appRoot.getChildren().remove(wrapper);
+            if (onFinished != null) {
+                onFinished.run();
+            }
+        });
         slide.play();
         fade.play();
     }
