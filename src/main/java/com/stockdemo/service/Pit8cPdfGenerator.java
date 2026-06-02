@@ -1,5 +1,6 @@
 package com.stockdemo.service;
 
+import com.stockdemo.model.AssetType;
 import com.stockdemo.model.ClosedPosition;
 import com.stockdemo.model.Pit8cData;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -60,13 +61,33 @@ public class Pit8cPdfGenerator {
         doc = new PDDocument();
         loadFonts();
 
-        double rev = 0, cost = 0;
+        double stockRev = 0, stockCost = 0;
+        double cfdRev = 0, cfdCost = 0;
+
         for (ClosedPosition cp : positions) {
-            rev += cp.closePrice() * cp.quantity();
-            cost += cp.entryPrice() * cp.quantity();
+            // 1. Filtrowanie po roku podatkowym
+            if (cp.closeDate().getYear() != d.rok) {
+                continue;
+            }
+
+            // 2. Kwalifikacja według typu instrumentu
+            AssetType type = cp.instrument().getType();
+            if (type == AssetType.STOCK) {
+                stockRev += cp.closePrice() * cp.quantity();
+                stockCost += cp.entryPrice() * cp.quantity();
+            } else if (type == AssetType.CFD) {
+                // CFD: rozliczenie zysków/strat netto z zamkniętych pozycji
+                double pnl = cp.realizedPnl();
+                if (pnl > 0) {
+                    cfdRev += pnl;
+                } else if (pnl < 0) {
+                    cfdCost += Math.abs(pnl);
+                }
+            }
+            // CRYPTO jest całkowicie wykluczone z PIT-8C (rozliczane na PIT-38 część E przez podatnika)
         }
 
-        page1(d, rev, cost);
+        page1(d, stockRev, stockCost, cfdRev, cfdCost);
         page2(d);
         doc.save(out);
         doc.close();
@@ -183,7 +204,7 @@ public class Pit8cPdfGenerator {
 
     // ── Strona 1 ──
 
-    private void page1(Pit8cData d, double rev, double cost) throws IOException {
+    private void page1(Pit8cData d, double stockRev, double stockCost, double cfdRev, double cfdCost) throws IOException {
         PDPage pg = new PDPage(PDRectangle.A4);
         doc.addPage(pg);
         cs = new PDPageContentStream(doc, pg);
@@ -321,15 +342,18 @@ public class Pit8cPdfGenerator {
         txt(ML + dW + pW + kW * 0.47f, y + 20, "c", f, 6);
         y += 28;
 
+        double totalRev = stockRev + cfdRev;
+        double totalCost = stockCost + cfdCost;
+
         // Wiersze tabeli
         Object[][] rows = {
-            {"1. Odplatne zbycie papierow wartosciowych", "23.", rev, "24.", cost},
+            {"1. Odplatne zbycie papierow wartosciowych", "23.", stockRev, "24.", stockCost},
             {"2. Realizacja praw wynikajacych z papierow wartosciowych", "25.", 0.0, "26.", 0.0},
-            {"3. Odplatne zbycie pochodnych instrumentow finansowych oraz realizacja praw z nich", "27.", 0.0, "28.", 0.0},
+            {"3. Odplatne zbycie pochodnych instrumentow finansowych oraz realizacja praw z nich", "27.", cfdRev, "28.", cfdCost},
             {"4. Odplatne zbycie niebedacych papierami wartosciowymi udzialow (akcji)", "29.", 0.0, "30.", 0.0},
             {"5. Objecie udzialow (akcji) w spolkach albo wkladow w spoldzielniach za wklad", "31.", 0.0, "32.", 0.0},
             {"6. Umorzenie, odkupienie, wykupienie albo unicestwienie w inny sposob tytulow", "33.", 0.0, "34.", 0.0},
-            {"Razem", "35.", rev, "36.", cost}
+            {"Razem", "35.", totalRev, "36.", totalCost}
         };
 
         for (int i = 0; i < rows.length; i++) {
